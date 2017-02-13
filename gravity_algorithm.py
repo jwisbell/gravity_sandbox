@@ -8,14 +8,14 @@ from astropy.convolution import convolve, convolve_fft
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.mlab as mlab
-
+import testing
 # gdal (Geospatial Data Access Library) module allows DEM file manipulation
 import gdal
 from time import time
 
 start = time()
 
-# Reading in DEM file
+'''# Reading in DEM file
 dem_file = gdal.Open('BathymetrySaverTool.dem')
 
 # Converts dem_file to numpy array of shape (480, 639)
@@ -45,7 +45,8 @@ plt.show()
 ### Potential Calculation ###
 plummer_kernel = fits.getdata('DiscPlumFITS.fits',0)              # Import Plummer Kernel
 density_field = dem_array                                           # Import Density Field
-
+print density_field.shape()
+w = input()
 potential =  -1 * convolve_fft(density_field, plummer_kernel)     # Calculation of potential field using discrete convolution
 
 Poten = fits.PrimaryHDU(potential)                                # Assign HDU to potential calculation
@@ -54,19 +55,19 @@ Potenlist.writeto('PotentialField.fits', clobber = True)          # Save potenti
 
 
 
-
+'''
 ### Orbit Calculations ###
 ## Taking gradient of potential field to get acceleration field ##
-h,w = np.asarray(potential).shape
+'''h,w = np.asarray(potential).shape
 x, y = np.mgrid[0:h, 0:w]
 dy, dx = np.gradient(np.asarray(potential))
 dy =  np.negative(dy) 
 dx =  np.negative(dx)
-p = np.asarray(potential)
-
+p = np.asarray(potential)'''
+dx,dy = testing.make_acceleration_field(50,50,10)
 # Sample values 
-vel = np.array([2,0]) 
-pos = np.array([300,100]) 
+vel = np.array([0,0]) 
+pos = np.array([25,50]) 
 
 # NOTES: When the particle moves out of bounds of the density field, the calculation will stop and return an error. This will eventually be remedied so the particle either stops or reflects off of the boundary. 
 
@@ -87,6 +88,7 @@ def leap(pos,vel):
     posv = np.rint(pos)         # Interpolate between pixels using np.rint in y direction
     acc = acce(posv)
     vel = vel + 0.5*dtime*np.array(acc)
+    pos = pos + dtime*vel
     return pos,vel        
 
 ## Energy Conservation: K+U; K is 0.5v^2 and U is index on the potential.
@@ -101,19 +103,24 @@ posytot = []
 
 times = 10000                 # Set the number of steps to be calculated
 for n in xrange(1, times):
-    pos,vel = leap(pos,vel)
-    posxtot.append(pos[0])
-    posytot.append(pos[1])
+    if pos[0]<=460 and pos[1]<=640:
+        pos,vel = leap(pos,vel)
+        posxtot.append(pos[0])
+        posytot.append(pos[1])
 
 # Plotting orbits for troubleshooting #
-"""
+accel_im = np.zeros(dx.shape)
+for i in range(dx.shape[0]):
+    for j in range(dx.shape[1]):
+        accel_im[i,j]=np.sqrt(dx[i,j]**2 + dy[i,j]**2)
 fig = plt.figure()
+plt.imshow(accel_im)
 plt.plot(posxtot, posytot)
 plt.suptitle('Orbit for DEM file')
 plt.xlabel('X component of position')
 plt.ylabel('Y component of position')
-plt.show()
-"""
+plt.savefig('test.png',bbinches='tight')
+
 
 time = time() - start
 print time                # Benchmark time
