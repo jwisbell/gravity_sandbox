@@ -10,7 +10,7 @@ import matplotlib.cm as cm
 import matplotlib.mlab as mlab
 import testing
 # gdal (Geospatial Data Access Library) module allows DEM file manipulation
-import gdal
+#import gdal
 from time import time
 
 start = time()
@@ -64,31 +64,43 @@ dy, dx = np.gradient(np.asarray(potential))
 dy =  np.negative(dy) 
 dx =  np.negative(dx)
 p = np.asarray(potential)'''
-dx,dy = testing.make_acceleration_field(50,50,10)
+dx,dy, potential = testing.make_acceleration_field(300,300,10)
+dx, dy = np.gradient(potential)
+dx = np.negative(dx)
+dy = np.negative(dy)
 # Sample values 
 vel = np.array([0,0]) 
-pos = np.array([25,50]) 
+pos = np.array([250,250]) 
 
 # NOTES: When the particle moves out of bounds of the density field, the calculation will stop and return an error. This will eventually be remedied so the particle either stops or reflects off of the boundary. 
 
 # Calculate velocity from initial position
 def acce(pos):
-    return ([dx[pos[1].astype(int)][pos[0].astype(int)],dy[pos[1].astype(int)][pos[0].astype(int)]])
+    return (dx[pos[0],pos[1]], dy[pos[0],pos[1]])
 
 #needs exception handling
 
 ## Leapstep Definition ##
 dtime = 0.1
 
+acceleration = []
+velocity_arr = []
 def leap(pos,vel):
     posi = np.rint(pos)         # Interpolate between pixels using np.rint in x direction
+    #print posi
     acc = acce(posi)
+    acceleration.append(acc)
+    #print acc
     vel = vel + 0.5*dtime*np.array(acc)
-    pos = pos + dtime*vel
+    velocity_arr.append(vel)
+    pos = pos + 0.5*dtime*vel
     posv = np.rint(pos)         # Interpolate between pixels using np.rint in y direction
+    #if pos[0]<460 and pos[1]<640:
     acc = acce(posv)
+    acceleration.append(acc)
     vel = vel + 0.5*dtime*np.array(acc)
-    pos = pos + dtime*vel
+    velocity_arr.append(vel)
+    pos = pos + 0.5*dtime*vel
     return pos,vel        
 
 ## Energy Conservation: K+U; K is 0.5v^2 and U is index on the potential.
@@ -101,12 +113,18 @@ def e(pos,vel):
 posxtot = []
 posytot = []
 
-times = 10000                 # Set the number of steps to be calculated
+times = 50000                # Set the number of steps to be calculated
 for n in xrange(1, times):
-    if pos[0]<=460 and pos[1]<=640:
+    if pos[0]<460 and pos[1]<640:
         pos,vel = leap(pos,vel)
         posxtot.append(pos[0])
         posytot.append(pos[1])
+
+fig, (ax1,ax2) = plt.subplots(2)
+ax1.plot(range(len(acceleration)), acceleration)
+ax2.plot(range(len(velocity_arr)), velocity_arr)
+plt.show()
+plt.close()
 
 # Plotting orbits for troubleshooting #
 accel_im = np.zeros(dx.shape)
@@ -114,7 +132,7 @@ for i in range(dx.shape[0]):
     for j in range(dx.shape[1]):
         accel_im[i,j]=np.sqrt(dx[i,j]**2 + dy[i,j]**2)
 fig = plt.figure()
-plt.imshow(accel_im)
+plt.imshow(potential)
 plt.plot(posxtot, posytot)
 plt.suptitle('Orbit for DEM file')
 plt.xlabel('X component of position')
