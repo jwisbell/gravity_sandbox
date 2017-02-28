@@ -58,7 +58,7 @@ class Particle():
         p1 = self.rk4(step/2., self.pos)
         #v1 = self.rk4(step, self.vel)
         #p2 = [self.pos[i] + self.vel[i]*(step/2.0) for i in range(len(self.pos))]
-        if self.is_inbounds():
+        if self.is_inbounds(self.edge_mode):
             self.update_accel(p1)
             p2 = self.rk4(step/2., self.pos)
             #v2 = self.rk4(step/2.0, self.vel)
@@ -66,21 +66,52 @@ class Particle():
                 self.pos[i] = p2[i]
         else:
             self.pos[i] = [x for x in p1]
-    def is_inbounds(self):
-        #print self.pos
-        return self.pos[0] <= MAXX and self.pos[0] >= MIN and self.pos[1] <= MAXY and self.pos[1] >= MIN
+    def is_inbounds(self, edge_mode):
+        self.edge_mode = edge_mode
+        if edge_mode == 'stop':
+            return self.pos[0] <= MAXX and self.pos[0] >= MIN and self.pos[1] <= MAXY and self.pos[1] >= MIN
+        if edge_mode == 'reflect':
+            if self.pos[1] >= MAXX:
+                self.pos[1] = MAXX-1
+                self.vel[1] = self.vel[1] * -1
+                print 'BOUNCE'
+            elif self.pos[1] <= MIN:
+                self.pos[1] = MIN+1
+                self.vel[1] = self.vel[1] * -1
+                print 'BOUNCE'
+            elif self.pos[0] >= MAXY:
+                self.pos[0] = MAXY-1
+                self.vel[0] = self.vel[0] * -1
+                print 'BOUNCE'
+            elif self.pos[0] <= MIN:
+                self.pos[0] = MIN+1
+                self.vel[0] = self.vel[0] * -1
+                print 'BOUNCE'
+            return True
+        if edge_mode == 'pacman':
+            if self.pos[1] >= MAXX:
+                self.pos[1] = MIN+1
+            elif self.pos[1] <= MIN:
+                self.pos[1] = MAXX-1
+            elif self.pos[0] >= MAXY:
+                self.pos[0] = MIN+1 
+            elif self.pos[0] <= MIN:
+                self.pos[0] = MAXY-1
+            return True
+        
 
 
 dx,dy, potential = testing.make_acceleration_field(300,300,1)
 '''from astropy.io import fits
 hdu = fits.open('earth_moon_pot.fits')
 potential = hdu[0].data'''
+potential = np.log(potential+1) #normalize with ln
 dx, dy = np.gradient(potential)
 dx = np.negative(dx)
 dy = np.negative(dy)
-MAXX = dx.shape[1]-1
+MAXX = 460#dx.shape[1]-1
 MIN = 0
-MAXY = dy.shape[0]-1
+MAXY = 640#dy.shape[0]-1
 
 
 # Sample values 
@@ -129,22 +160,22 @@ def e(pos,vel):
 ## Orbit Calculation ##
 posxtot = []
 posytot = []
-step = 0.01
-times = 5000000                # Set the number of steps to be calculated
+step = 0.1
+times = 50000                # Set the number of steps to be calculated
 velocity = -np.sqrt(1./(320-300))
-test_particle = Particle([320,300],[0,0])
-print test_particle.pos
+#test_particle = Particle([320,300],[0,.5])
+#print test_particle.pos
 
 
 acceleration = []
 velocity_arr = []
 pos_arr = []
 energy = []
-def run_orbit(test_particle):
+def run_orbit(test_particle, edge_mode='reflect'):
     num_steps = 0
     for n in xrange(1, times):
-        #if pos[0]<460 and pos[1]<640:
-        if test_particle.is_inbounds():
+        if test_particle.is_inbounds(edge_mode):
+            print test_particle.pos
             test_particle.update(step)
             posxtot.append(test_particle.pos[0])
             posytot.append(test_particle.pos[1])
@@ -185,8 +216,9 @@ plt.close()
 posxtot = []
 posytot = []
 velocity = -np.sqrt(1./(350-300))
-test_particle = Particle([350,300],[0,-.28])
-x= run_orbit(test_particle)
+test_particle = Particle([400,400],[0,.5])
+print 'HERE'
+x = run_orbit(test_particle)
 
 
 fig, (ax1,ax2, ax3) = plt.subplots(3)
@@ -198,7 +230,7 @@ ax3.plot(range(len(pos_arr)), pos_arr)
 ax3.set_ylabel('Position')
 #ax4.plot(range(len(energy)), energy)
 #ax4.set_ylabel('Energy')
-plt.savefig('rk4_freefall2.png', bbinches='tight')
+#plt.savefig('rk4_freefall2.png', bbinches='tight')
 plt.close()
 
 # Plotting orbits for troubleshooting #
@@ -208,13 +240,13 @@ for i in range(dx.shape[0]):
         accel_im[i,j]=np.sqrt(dx[i,j]**2 + dy[i,j]**2)
 fig = plt.figure()
 plt.imshow(potential)
-plt.plot(posxtot, posytot)
+plt.plot(posytot, posxtot, linewidth=2)
 plt.suptitle('Orbit for Potential file with 1 pt')
 plt.xlabel('X component of position')
 plt.xlim((0,dx.shape[1]))
 plt.ylim((0, dy.shape[0]))
 plt.ylabel('Y component of position')
-plt.savefig('freefall_test2.png',bbinches='tight')
+#plt.savefig('freefall_test2.png',bbinches='tight')
 
 
 time = time() - start
