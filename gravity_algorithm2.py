@@ -13,9 +13,9 @@ from scipy.optimize import curve_fit
 
 # gdal (Geospatial Data Access Library) module allows DEM file manipulation
 #import gdal
-from time import time
+import time
 
-start = time()
+start = time.time()
 
 class Particle():
     def __init__(self,pos,vel, potential):
@@ -70,29 +70,26 @@ class Particle():
     def get_time_step(self):
         val = abs(self.pot[self.pos[0],self.pos[1]])
         #print 'potential value is ', val
-        mx = 0.01*abs(np.min(self.pot))
+        mx = .125*abs(np.min(self.pot))
         #print mx
+        #print val
         #return 0.01
-        if val < 0.125*mx:
-            return 0.1
-        elif val >= 0.125*mx:
-            return 0.0875
-        elif val >= 0.25*mx:
-            return 0.075
-        elif val >= 0.375*mx:
-            return 0.0625
-        elif val >= 0.5*mx:
-            return 0.05
-        elif val >= 0.625*mx:
-            return 0.0375
-        elif val >= 0.75*mx:
-            return 0.025
-        elif val >= 0.75*mx:
-            return 0.0125
-        elif val > .95*mx:
+        if val <= 0.125*mx:
             return 0.01
+        elif val <= 0.25*mx:
+            return 0.00875
+        elif val <= 0.375*mx:
+            return 0.0075
+        elif val <= 0.5*mx:
+            return 0.005
+        elif val <= 0.625*mx:
+            return 0.00325
+        elif val <= 0.75*mx:
+            return 0.0025
+        elif val <= 0.875*mx:
+            return 0.00125
         else:
-            return 0.01
+            return 0.001
     def update(self,step): 
         #p1 = [self.pos[i] + self.vel[i]*step for i in range(len(self.pos))]
         p1 = self.rk4(step/2., self.pos)
@@ -147,7 +144,7 @@ hdu = fits.open('earth_moon_pot.fits')
 potential = hdu[0].data'''
 #potential = potential/np.sum(potential)*2 #normalize with ln
 dx, dy = np.gradient(potential)
-#dx = np.negative(dx)
+dx = np.negative(dx)
 dy = np.negative(dy)
 MAXX = dx.shape[1]-1
 MIN = 0
@@ -201,7 +198,7 @@ def e(pos,vel):
 posxtot = []
 posytot = []
 step = 0.01
-times = 250000                # Set the number of steps to be calculated
+times = 500000                # Set the number of steps to be calculated
 velocity = -np.sqrt(1./(320-300))
 #test_particle = Particle([320,300],[0,0])
 #print test_particle.pos
@@ -217,41 +214,44 @@ interp_points = np.array([0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.])
 test_positionsx = []; test_positionsy = []
 def run_orbit2(test_particle):
     num_steps = 0
-    for n in xrange(1, times):
-        #if pos[0]<460 and pos[1]<640:
+    #for n in xrange(1, times):
+    total_time = 0
+    s = time.time()
+    while total_time < 20.:
         if test_particle.is_inbounds('reflect'):
-            test_particle.update(0.01)
+            test_particle.update(0.001)
             posxtot.append(test_particle.pos[0])
             posytot.append(test_particle.pos[1])
             acceleration.append(test_particle.acc[0])
             velocity_arr.append(test_particle.vel[0])
             pos_arr.append(test_particle.pos[0])
-            #if test_particle.pos[0] <= 300:
-            #num_steps = n
-            #return num_steps
+            total_time = (time.time() -s)
         else:
             break
     return num_steps
 
-
-def run_orbit(test_particle, edge_mode='reflect'):
+posxtot2 = []
+posytot2 = []
+def run_orbit(test_particle, times = 1000, edge_mode='reflect'):
     num_steps = 0
-    time = []
+    #time = []
     posx = []; posy = []
-    for n in xrange(1, times):
-        print n
+    #for n in xrange(1, times):
+    total_time = 0
+    s = time.time()
+    while total_time < 20.:
         if test_particle.is_inbounds(edge_mode):
             dt = test_particle.get_time_step()
             #print dt
             test_particle.update(step)
-            posxtot.append(test_particle.pos[0])
-            posytot.append(test_particle.pos[1])
+            posxtot2.append(test_particle.pos[0])
+            posytot2.append(test_particle.pos[1])
             pos_arr.append(test_particle.pos[0])
             acceleration.append(dy[test_particle.pos[0], test_particle.pos[1]])
             posx.append(test_particle.pos[0])
             posy.append(test_particle.pos[1])
-            time.append(dt)
-            if np.sum(time) >= 1:
+            #time.append(dt)
+            '''if np.sum(time) >= 1:
                 to_sendx = np.interp(interp_points,time,posx)
                 to_sendy = np.interp(interp_points,time,posy)
                 for i in range(len(to_sendx)):
@@ -259,14 +259,15 @@ def run_orbit(test_particle, edge_mode='reflect'):
                     test_positionsy.append(to_sendy[i])
                 time = []
                 posx = []
-                posy = []
+                posy = []'''
+            total_time = (time.time() -s)
         else:
             break
+    print time
     return num_steps
-def dynamic_orbit(test_particle, edge_mode='stop'):
+def dynamic_orbit(test_particle, edge_mode='reflect'):
     time = []
     posx = []; posy = []
-    print test_particle.vel
     for n in range(1, times):
         if test_particle.is_inbounds(edge_mode):
             dt = test_particle.dynamic_timestep()
@@ -276,7 +277,7 @@ def dynamic_orbit(test_particle, edge_mode='stop'):
             posx.append(test_particle.pos[0])
             posy.append(test_particle.pos[1])
             time.append(dt)
-            if np.sum(time) >= 1.:
+            '''if np.sum(time) >= 1.:
                 to_sendx = np.interp(interp_points,time,posx)
                 to_sendy = np.interp(interp_points,time,posy)
                 for i in range(len(to_sendx)):
@@ -284,9 +285,10 @@ def dynamic_orbit(test_particle, edge_mode='stop'):
                     test_positionsy.append(to_sendy[i])
                 time = []
                 posx = []
-                posy = []
+                posy = []'''
         else:
             break
+    print time
 '''start_pos = np.linspace(1, 150,10)
 masses = np.linspace(0.1, 1, 10)
 f = open('timescale.txt','w')
@@ -303,7 +305,7 @@ for x in masses:
     f.write('%i\n'%(t))
 f.close()
 '''
-def functional(m, a, b):
+'''def functional(m, a, b):
     return a/np.sqrt(m) + b
 f = open('timescale.txt','r')
 lines = f.readlines()
@@ -326,13 +328,19 @@ plt.title('Free-fall Timescale')
 plt.savefig('free_fall_timescale.png',bbinches='tight')
 plt.close()
 
-
+'''
 velocity = -np.sqrt(1./(350-300))
-test_particle = Particle([300,320],[0,0], potential)
-print 'HERE'
-#x = run_orbit(test_particle)
-#dynamic_orbit(test_particle)
+test_particle = Particle([300,320],[.32,0.], potential)
+start_static = time.time()
+x = run_orbit2(test_particle)
+end_static = time.time()
+test_particle = Particle([300,320],[.32,0.], potential)
+start_d = time.time()
+x = run_orbit(test_particle)
+end_d = time.time()
 
+print 'Static took %f seconds'%(end_static-start_static)
+print 'Dynamic took %f seconds'%(end_d-start_d)
 
 fig, (ax1,ax2, ax3) = plt.subplots(3)
 ax1.plot(range(len(acceleration)), acceleration)
@@ -354,17 +362,18 @@ for i in range(dx.shape[0]):
         accel_im[i,j]=np.sqrt(dx[i,j]**2 + dy[i,j]**2)
 fig = plt.figure()
 plt.imshow(potential)
-plt.plot(posytot, posxtot, linewidth=2)
+plt.plot(posytot, posxtot, linewidth=2,c='blue')
+plt.plot(posytot2, posxtot2, linewidth=1, c='green')
 #plt.plot(test_positionsx, test_positionsy, linewidth=1)
 plt.suptitle('Orbit for Potential file with 1 pt')
 plt.xlabel('X component of position')
 plt.xlim((0,dx.shape[1]))
 plt.ylim((0, dy.shape[0]))
 plt.ylabel('Y component of position')
-#plt.savefig('freefall_test2.png',bbinches='tight')
+plt.savefig('timing_test.png',bbinches='tight')
 
 
-time = time() - start
+time = time.time() - start
 print time                # Benchmark time
 plt.show()
 
