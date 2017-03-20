@@ -6,7 +6,8 @@ import subprocess
 #------- Import our files ---------
 import gravity_algorithm2
 import DiscretePlummerKernel
-import convolve
+import convolve as Convolve
+import gdal
 
 
 # --------- Constants -----------
@@ -39,7 +40,7 @@ if __namespace__ == 'main':
 		"""
 		CONVOLVE THE DEM-DENSITY FIELD WITH THE PLUMMER KERNEL
 		"""
-		potential_field = convolve.convolve(dem_array, PLUMMER, 'kernel')
+		potential_field = Convolve.convolve(dem_array, PLUMMER, 'kernel')
 		"""
 		CHECK TO SEE IF WE ARE RUNNING ON NEW PARAMS
 		"""
@@ -52,7 +53,7 @@ if __namespace__ == 'main':
 		INTEGRATE FOR A WHILE
 		"""
 		
-		to_send = gravity_algorithm2.runorbit(particle, 1000, edge_mode='reflect')
+		to_send = gravity_algorithm2.runorbit(particle, 1000, edge_mode='reflect') #run for 1000 iterations and save the array
 
 		"""
 		SEND IMAGE, ORBIT DATA TO APP

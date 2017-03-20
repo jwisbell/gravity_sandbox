@@ -8,22 +8,22 @@ def load_wisdom():
     return plan
 
 
-def read_wisdom():
-    f = open('forward_plan_0.txt')
+def read_wisdom(fname):
+    f = open(fname+'_0.txt')
     lines = f.readlines()
     part1 = '' 
     for l in lines:
         part1 = part1+l
     f.close()
     
-    f = open('forward_plan_1.txt')
+    f = open(fname+'_1.txt')
     lines = f.readlines()
     part2 ='' 
     for l in lines:
         part2 = part2+l
     f.close()
    
-    f = open('forward_plan_2.txt')
+    f = open(fname+'_2.txt')
     lines = f.readlines()
     part3 = '' 
     for l in lines:
