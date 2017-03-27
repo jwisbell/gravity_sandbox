@@ -20,13 +20,19 @@ start = time.time()
 class Particle():
     def __init__(self,pos,vel, potential):
         self.pot = potential
+        dx, dy = np.gradient(potential)
+        self.dx = np.negative(dx)
+        self.dy = np.negative(dy)
+        self.MAXX = dx.shape[1]-1
+        self.MIN = 0
+        self.MAXY = dy.shape[0]-1
         self.pos = pos
         self.vel = vel
-        self.acc = [dx[int(self.pos[0]),int(self.pos[1])], dy[int(self.pos[0]),int(self.pos[1])]]
+        self.acc = [self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]]
     def update_accel(self,pos):
-        self.acc = [dx[int(self.pos[0]),int(self.pos[1])], dy[int(self.pos[0]),int(self.pos[1])]]
+        self.acc = [self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]]
     def a(self):
-        return [dx[int(self.pos[0]),int(self.pos[1])], dy[int(self.pos[0]),int(self.pos[1])]]
+        return [self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]]
     def v(self,pos, step):
         temp_a = self.a()
         self.vel = [self.vel[0]+temp_a[0]*step, self.vel[1]+temp_a[1]*step]
@@ -106,49 +112,37 @@ class Particle():
     def is_inbounds(self, edge_mode):
         self.edge_mode = edge_mode
         if edge_mode == 'stop':
-            return self.pos[0] < MAXX and self.pos[0] > MIN and self.pos[1] < MAXY and self.pos[1] > MIN
+            return self.pos[0] < self.MAXX and self.pos[0] > self.MIN and self.pos[1] < self.MAXY and self.pos[1] > self.MIN
         if edge_mode == 'reflect':
-            if self.pos[1] >= MAXX:
-                self.pos[1] = MAXX-1
+            if self.pos[1] >= self.MAXX:
+                self.pos[1] = self.MAXX-1
                 self.vel[1] = self.vel[1] * -1
                 print 'BOUNCE'
-            elif self.pos[1] <= MIN:
-                self.pos[1] = MIN+1
+            elif self.pos[1] <= self.MIN:
+                self.pos[1] = self.MIN+1
                 self.vel[1] = self.vel[1] * -1
                 print 'BOUNCE'
-            elif self.pos[0] >= MAXY:
-                self.pos[0] = MAXY-1
+            elif self.pos[0] >= self.MAXY:
+                self.pos[0] = self.MAXY-1
                 self.vel[0] = self.vel[0] * -1
                 print 'BOUNCE'
-            elif self.pos[0] <= MIN:
-                self.pos[0] = MIN+1
+            elif self.pos[0] <= self.MIN:
+                self.pos[0] = self.MIN+1
                 self.vel[0] = self.vel[0] * -1
                 print 'BOUNCE'
             return True
         if edge_mode == 'pacman':
-            if self.pos[1] >= MAXX:
-                self.pos[1] = MIN+1
-            elif self.pos[1] <= MIN:
-                self.pos[1] = MAXX-1
-            elif self.pos[0] >= MAXY:
-                self.pos[0] = MIN+1 
-            elif self.pos[0] <= MIN:
-                self.pos[0] = MAXY-1
+            if self.pos[1] >= self.MAXX:
+                self.pos[1] = self.MIN+1
+            elif self.pos[1] <= self.MIN:
+                self.pos[1] = self.MAXX-1
+            elif self.pos[0] >= self.MAXY:
+                self.pos[0] = self.MIN+1 
+            elif self.pos[0] <= self.MIN:
+                self.pos[0] = self.MAXY-1
             return True
         
 
-
-dx,dy, potential = testing.make_acceleration_field(300,300,1)
-'''from astropy.io import fits
-hdu = fits.open('earth_moon_pot.fits')
-potential = hdu[0].data'''
-#potential = potential/np.sum(potential)*2 #normalize with ln
-dx, dy = np.gradient(potential)
-dx = np.negative(dx)
-dy = np.negative(dy)
-MAXX = dx.shape[1]-1
-MIN = 0
-MAXY = dy.shape[0]-1
 
 
 # Sample values 
@@ -160,13 +154,14 @@ def acce(pos):
 
 #needs exception handling
 
-## Leapstep Definition ##
-dtime = 0.1
-acceleration = []
-velocity_arr = []
-pos_arr = []
-energy = []
+
 def leap(pos,vel):
+    ## Leapstep Definition ##
+    dtime = 0.1
+    acceleration = []
+    velocity_arr = []
+    pos_arr = []
+    energy = []
     posi = np.rint(pos)         # Interpolate between pixels using np.rint in x direction
     #print posi
     acc = acce(posi)
@@ -195,24 +190,25 @@ def e(pos,vel):
 
 
 ## Orbit Calculation ##
-posxtot = []
-posytot = []
-step = 0.01
-times = 500000                # Set the number of steps to be calculated
-velocity = -np.sqrt(1./(320-300))
+#posxtot = []
+#posytot = []
+#step = 0.01
+#times = 500000                # Set the number of steps to be calculated
+#velocity = -np.sqrt(1./(320-300))
 #test_particle = Particle([320,300],[0,0])
 #print test_particle.pos
 
 
-acceleration = []
-velocity_arr = []
-pos_arr = []
-energy = []
-posxtot = []
-posytot = []
-interp_points = np.array([0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.])
-test_positionsx = []; test_positionsy = []
+
 def run_orbit2(test_particle):
+    acceleration = []
+    velocity_arr = []
+    pos_arr = []
+    energy = []
+    posxtot = []
+    posytot = []
+    interp_points = np.array([0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.])
+    test_positionsx = []; test_positionsy = []
     num_steps = 0
     #for n in xrange(1, times):
     total_time = 0
@@ -230,27 +226,16 @@ def run_orbit2(test_particle):
             break
     return num_steps
 
-posxtot2 = []
-posytot2 = []
 def run_orbit(test_particle, times = 1000, edge_mode='reflect'):
+    step = 0.001
     num_steps = 0
-    #time = []
-    posx = []; posy = []
-    #for n in xrange(1, times):
-    total_time = 0
-    s = time.time()
-    while total_time < 20.:
+    posx = []; posy = []; fmatted = []
+    for n in xrange(1, times):
         if test_particle.is_inbounds(edge_mode):
-            dt = test_particle.get_time_step()
+            #dt = test_particle.get_time_step()
             #print dt
             test_particle.update(step)
-            posxtot2.append(test_particle.pos[0])
-            posytot2.append(test_particle.pos[1])
-            pos_arr.append(test_particle.pos[0])
-            acceleration.append(dy[test_particle.pos[0], test_particle.pos[1]])
-            posx.append(test_particle.pos[0])
-            posy.append(test_particle.pos[1])
-            #time.append(dt)
+            fmatted.append((test_particle.pos[0], test_particle.pos[1]))
             '''if np.sum(time) >= 1:
                 to_sendx = np.interp(interp_points,time,posx)
                 to_sendy = np.interp(interp_points,time,posy)
@@ -260,11 +245,10 @@ def run_orbit(test_particle, times = 1000, edge_mode='reflect'):
                 time = []
                 posx = []
                 posy = []'''
-            total_time = (time.time() -s)
         else:
             break
-    print time
-    return num_steps
+    return fmatted
+
 def dynamic_orbit(test_particle, edge_mode='reflect'):
     time = []
     posx = []; posy = []
@@ -329,52 +313,65 @@ plt.savefig('free_fall_timescale.png',bbinches='tight')
 plt.close()
 
 '''
-velocity = -np.sqrt(1./(350-300))
-test_particle = Particle([300,320],[.32,0.], potential)
-start_static = time.time()
-x = run_orbit2(test_particle)
-end_static = time.time()
-test_particle = Particle([300,320],[.32,0.], potential)
-start_d = time.time()
-x = run_orbit(test_particle)
-end_d = time.time()
+if __name__ == '__main__':
+    dx,dy, potential = testing.make_acceleration_field(300,300,1)
+    '''from astropy.io import fits
+    hdu = fits.open('earth_moon_pot.fits')
+    potential = hdu[0].data'''
+    #potential = potential/np.sum(potential)*2 #normalize with ln
+    dx, dy = np.gradient(potential)
+    dx = np.negative(dx)
+    dy = np.negative(dy)
+    MAXX = dx.shape[1]-1
+    MIN = 0
+    MAXY = dy.shape[0]-1
 
-print 'Static took %f seconds'%(end_static-start_static)
-print 'Dynamic took %f seconds'%(end_d-start_d)
+    velocity = -np.sqrt(1./(350-300))
+    test_particle = Particle([300,320],[.32,0.], potential)
+    start_static = time.time()
+    x = run_orbit2(test_particle)
+    end_static = time.time()
+    test_particle = Particle([300,320],[.32,0.], potential)
+    start_d = time.time()
+    x = run_orbit(test_particle)
+    end_d = time.time()
 
-fig, (ax1,ax2, ax3) = plt.subplots(3)
-ax1.plot(range(len(acceleration)), acceleration)
-ax1.set_ylabel('Accleration')
-ax2.plot(range(len(velocity_arr)), velocity_arr)
-ax2.set_ylabel('Velocity')
-ax3.plot(range(len(posxtot)), posxtot)
-ax3.set_ylabel('Position')
-#ax4.plot(range(len(energy)), energy)
-#ax4.set_ylabel('Energy')
-#plt.savefig('rk4_freefall2.png', bbinches='tight')
-plt.show()
-plt.close()
+    print 'Static took %f seconds'%(end_static-start_static)
+    print 'Dynamic took %f seconds'%(end_d-start_d)
 
-# Plotting orbits for troubleshooting #
-accel_im = np.zeros(dx.shape)
-for i in range(dx.shape[0]):
-    for j in range(dx.shape[1]):
-        accel_im[i,j]=np.sqrt(dx[i,j]**2 + dy[i,j]**2)
-fig = plt.figure()
-plt.imshow(potential)
-plt.plot(posytot, posxtot, linewidth=2,c='blue')
-plt.plot(posytot2, posxtot2, linewidth=1, c='green')
-#plt.plot(test_positionsx, test_positionsy, linewidth=1)
-plt.suptitle('Orbit for Potential file with 1 pt')
-plt.xlabel('X component of position')
-plt.xlim((0,dx.shape[1]))
-plt.ylim((0, dy.shape[0]))
-plt.ylabel('Y component of position')
-plt.savefig('timing_test.png',bbinches='tight')
+    fig, (ax1,ax2, ax3) = plt.subplots(3)
+    ax1.plot(range(len(acceleration)), acceleration)
+    ax1.set_ylabel('Accleration')
+    ax2.plot(range(len(velocity_arr)), velocity_arr)
+    ax2.set_ylabel('Velocity')
+    ax3.plot(range(len(posxtot)), posxtot)
+    ax3.set_ylabel('Position')
+    #ax4.plot(range(len(energy)), energy)
+    #ax4.set_ylabel('Energy')
+    #plt.savefig('rk4_freefall2.png', bbinches='tight')
+    plt.show()
+    plt.close()
+
+    # Plotting orbits for troubleshooting #
+    accel_im = np.zeros(dx.shape)
+    for i in range(dx.shape[0]):
+        for j in range(dx.shape[1]):
+            accel_im[i,j]=np.sqrt(dx[i,j]**2 + dy[i,j]**2)
+    fig = plt.figure()
+    plt.imshow(potential)
+    plt.plot(posytot, posxtot, linewidth=2,c='blue')
+    plt.plot(posytot2, posxtot2, linewidth=1, c='green')
+    #plt.plot(test_positionsx, test_positionsy, linewidth=1)
+    plt.suptitle('Orbit for Potential file with 1 pt')
+    plt.xlabel('X component of position')
+    plt.xlim((0,dx.shape[1]))
+    plt.ylim((0, dy.shape[0]))
+    plt.ylabel('Y component of position')
+    plt.savefig('timing_test.png',bbinches='tight')
 
 
-time = time.time() - start
-print time                # Benchmark time
-plt.show()
+    time = time.time() - start
+    print time                # Benchmark time
+    plt.show()
 
-#### FINAL NOTES: There still needs to be code written to replace the "Sample Values" with an IMPORTED .txt file from the interface team to define intial positions and velocities. Also, there needs to be code written to OUTPUT a .txt file of x and y position and time for the interface team. 
+    #### FINAL NOTES: There still needs to be code written to replace the "Sample Values" with an IMPORTED .txt file from the interface team to define intial positions and velocities. Also, there needs to be code written to OUTPUT a .txt file of x and y position and time for the interface team. 

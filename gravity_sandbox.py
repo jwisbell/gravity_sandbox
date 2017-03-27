@@ -6,8 +6,9 @@ import subprocess
 #------- Import our files ---------
 import gravity_algorithm2
 import DiscretePlummerKernel
-import convolve as Convolve
+import convolution
 import gdal
+import io_funcs
 
 
 # --------- Constants -----------
@@ -15,12 +16,19 @@ ADB_FILEPATH = ''
 NORMALIZATION = 1.
 REFRESH_RATE = 1 #hz
 SLEEP_TIME = 1 #seconds
+ITER = 1000 #number of iteration to orbit over
 
+def differ(arr1, arr2):
+	for k in range(len(arr1)):
+		if arr1[k] != arr2[k]:
+			return True
+	return False
 
 #------- begin main program ---------
-if __namespace__ == 'main':
+if __name__ == '__main__':
 	PLUMMER = fits.getdata('PlummerDFT.fits',0)   
-	particle = gravity_algorithm2.Particle(*input_params)
+	#particle = gravity_algorithm2.Particle(*input_params)
+	previous_vals = [0.,0.,0.,0.]
 	exit = 0
 	while exit == 0:
 		"""
@@ -40,27 +48,31 @@ if __namespace__ == 'main':
 		"""
 		CONVOLVE THE DEM-DENSITY FIELD WITH THE PLUMMER KERNEL
 		"""
-		potential_field = Convolve.convolve(dem_array, PLUMMER, 'kernel')
+		potential_field = convolution.convolve(dem_array, PLUMMER, 'kernel')
 		"""
 		CHECK TO SEE IF WE ARE RUNNING ON NEW PARAMS
-		"""
 
-			"""
-			READ IN INPUT PARAMS AND UPDATE PARTICLE
-			"""
-			particle = gravity_algorithm2.Particle(*input_params)
+		READ IN INPUT PARAMS AND UPDATE PARTICLE IF NEEDED
+		"""
+		input_params = io_funcs.read_from_app(ADB_FILEPATH)
+
+		particle = gravity_algorithm2.Particle(*previous_vals, potential_field)
+		if differ(input_params, previous_vals):
+			particle = gravity_algorithm2.Particle(*input_params, potential_field)
 		"""
 		INTEGRATE FOR A WHILE
 		"""
-		
-		to_send = gravity_algorithm2.runorbit(particle, 1000, edge_mode='reflect') #run for 1000 iterations and save the array
-
+		to_send = gravity_algorithm2.runorbit(particle, ITER, edge_mode='reflect') #run for 1000 iterations and save the array
+		previous_vals = [particle.pos[0], particle.pos[1], particle.vel[0], particle.vel[1]]
 		"""
 		SEND IMAGE, ORBIT DATA TO APP
 		"""
-		#adb push
+		if not io_funcs.write_to_tablet(ADB_FILEPATH, to_send):
+			exit = 1
 		"""
 		CLEAN UP FOR MEMORY MANAGEMENT
 		"""
-		# delete any extra variables
+		del to_send
+		del potential_field
+		del particle
 
