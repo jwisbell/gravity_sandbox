@@ -2,6 +2,7 @@
 import time
 import sys
 import subprocess
+import numpy as np
 
 #------- Import our files ---------
 import gravity_algorithm2
@@ -27,14 +28,17 @@ def differ(arr1, arr2):
 #------- begin main program ---------
 if __name__ == '__main__':
 	PLUMMER = fits.getdata('PlummerDFT.fits',0)   
-	#particle = gravity_algorithm2.Particle(*input_params)
-	previous_vals = [0.,0.,0.,0.]
+	previous_pos = [0.,0.]
+	previous_vel = [0.,0.]
+	current_pos = [0.,0.]
+	current_vel = [0.,0.]
 	exit = 0
 	while exit == 0:
+		start =time.time()
 		"""
 		REFRESH THE DEM FILE SAVED ON DISK
 		"""
-		subprocess('bash dem_saver.sh')
+		subprocess('bash dem_saver_2.sh')
 		"""
 		READ IN THE DEM FILE AS NUMPY ARRAY
 		"""
@@ -50,24 +54,26 @@ if __name__ == '__main__':
 		"""
 		potential_field = convolution.convolve(dem_array, PLUMMER, 'kernel')
 		"""
-		CHECK TO SEE IF WE ARE RUNNING ON NEW PARAMS
+		CHECK TO SEE IF WE ARE RUNNING ON NEW PARAMS?
 
 		READ IN INPUT PARAMS AND UPDATE PARTICLE IF NEEDED
 		"""
-		input_params = io_funcs.read_from_app(ADB_FILEPATH)
+		input_pos, input_vel = io_funcs.read_from_app()
 
-		particle = gravity_algorithm2.Particle(*previous_vals, potential_field)
-		if differ(input_params, previous_vals):
-			particle = gravity_algorithm2.Particle(*input_params, potential_field)
+		particle = gravity_algorithm2.Particle(current_pos, current_vel, potential_field)
+		if differ(input_pos, previous_pos) or differ(input_vel, previous_vel):
+			particle = gravity_algorithm2.Particle(input_pos, input_vel, potential_field)
+			previous_pos = np.copy(input_pos); previous_vel = np.copy(input_vel)
 		"""
 		INTEGRATE FOR A WHILE
 		"""
 		to_send = gravity_algorithm2.runorbit(particle, ITER, edge_mode='reflect') #run for 1000 iterations and save the array
-		previous_vals = [particle.pos[0], particle.pos[1], particle.vel[0], particle.vel[1]]
+		current_pos = [particle.pos[0], particle.pos[1]] 
+		current_vel = [particle.vel[0], particle.vel[1]]
 		"""
 		SEND IMAGE, ORBIT DATA TO APP
 		"""
-		if not io_funcs.write_to_tablet(ADB_FILEPATH, to_send):
+		if not io_funcs.write_to_tablet(to_send):
 			exit = 1
 		"""
 		CLEAN UP FOR MEMORY MANAGEMENT
@@ -75,4 +81,8 @@ if __name__ == '__main__':
 		del to_send
 		del potential_field
 		del particle
+		end = time.time()
+		print end-start(), 'seconds have elapsed...'
+		#maybe refresh after REFRESH_RATE - (end-start) seconds if positive number?
+		time.sleep(SLEEP_TIME - (end-start))
 
