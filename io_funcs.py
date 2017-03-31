@@ -3,6 +3,7 @@ import numpy as np
 from subprocess import call
 
 
+
 def read_from_app():
 	#copy file using adb pull
 	call('adb pull /storage/emulated/0/sandbox/algorithm_input.txt /home/gravity/Desktop/grav_sandbox/algorithm_input.txt', shell=True)
@@ -22,9 +23,24 @@ def read_from_app():
 	#to_send = [float(d) for d in data]
 	#return to_send
 
-read_from_app()
+#read_from_app()
 
-def write_to_tablet():
+def plot_orbit(data, potential_field):
+	import matplotlib.pyplot as plt
+	fig = plt.figure()
+	plt.imshow(potential_field)
+	xdata = [k[1] for k in data]
+	ydata = [k[0] for k in data]
+	plt.plot(xdata, ydata, c='r')
+	plt.show()
+	plt.close()
+
+
+def write_to_tablet(data):
+	f = open('/home/gravity/Desktop/grav_sandbox/algorithm_output.csv','w')
+	for k in range(len(data)):
+		f.write('%i, %i \n'%(data[k][0], data[k][1]))
+	f.close()
 	#use adb push
 	try:
 		call('adb push /home/gravity/Desktop/grav_sandbox/algorithm_output.csv /storage/emulated/0/sandbox/algorithm_output.csv', shell=True)
@@ -41,4 +57,4 @@ def write_to_tablet():
 			return 0
 
 
-write_to_tablet()
+#write_to_tablet()
