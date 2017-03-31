@@ -5,7 +5,16 @@ import pyfftw
 import time
 import wisdom_parse
 
+def pad(arr1, shape):
+	delta = shape-len(arr1)
+	w = delta/2
+	return np.concatenate((np.zeros(w), arr1, np.zeros(w)))
 
+def ew_mult(a1, a2):
+	f = np.zeros(a1.shape)
+	for k in range(len(a1)):
+		f[k] = a1[k] * a2[k]
+	return f
 
 def fft_forward(arr):
 	#perform DFT on entire kernel
@@ -20,7 +29,7 @@ def fft_forward(arr):
 	    pyfftw.import_wisdom(wis)
 	    transform = pyfftw.FFTW(inp, output, threads=4,flags='FFTW_WISDOM_ONLY')
 	except:
-	    print 'No previous FFT plan found, proceeding and saving one for later.'
+	    print 'No previous FFT Forward plan found, proceeding and saving one for later.'
 	    transform = pyfftw.FFTW(inp, output,threads=4)
 	    plan = pyfftw.export_wisdom()
 	    for i in range(len(plan)):
@@ -44,7 +53,7 @@ def fft_backward(arr):
 	    pyfftw.import_wisdom(wis)
 	    transform = pyfftw.FFTW(inp, output, threads=4,direction:='FFTW_BACKWARD',flags='FFTW_WISDOM_ONLY')
 	except:
-	    print 'No previous FFT plan found, proceeding and saving one for later.'
+	    print 'No previous FFT Backward plan found, proceeding and saving one for later.'
 	    transform = pyfftw.FFTW(inp, output,threads=4,direction:='FFTW_BACKWARD')
 	    plan = pyfftw.export_wisdom()
 	    for i in range(len(plan)):
@@ -65,7 +74,10 @@ def convolve(arr1, arr2):
 	return tform3
 
 def convolve(arr1, tform1, arr_type):
-	tform2 = fft_forward(arr2)
+	arr1 = arr1.flatten()
+	if len(arr1) != len(tform1):
+		arr1 = pad(arr1, len(tform1))
+	tform2 = fft_forward(arr1)	
 	to_tform = tform1*tform2
 	tform3 = fft_backward(to_tform)
 	return tform3
