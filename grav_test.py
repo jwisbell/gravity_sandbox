@@ -31,6 +31,14 @@ def differ(arr1, arr2):
 
 #------- begin main program ---------
 if __name__ == '__main__':
+	call('bash sandbox_start.sh', shell=True)
+	#------------ START THE SANDBOX ------------
+	'''call('/home/gravity/src/SARndbox-2.2/bin/SARndbox -uhm -fpv -rer 20 100 &', shell=True)
+	call('sleep 1.0')
+	call('wmctrl -R SARndbox; xdotool key "F11"; xdotool keydown "B";sleep 1; xdotool mousemove_relative 0 140; xdotool mousemove_relative -- -32 0; sleep 1; xdotool keyup "B";')'''
+	
+
+
 	PLUMMER = fits.getdata('PlummerDFT.fits',0)   
 	previous_pos = [0.,0.]
 	previous_vel = [0.,0.]
@@ -44,8 +52,9 @@ if __name__ == '__main__':
 		REFRESH THE DEM FILE SAVED ON DISK
 		"""
 		
-		call('wmctrl -a SARndbox', shell=True)
-		call('xdotool key "B"', shell=True)
+		#call('wmctrl -a SARndbox', shell=True)
+		call('xdotool keydown "B"', shell=True)
+		call('xdotool keyup "B"', shell=True)
 		
 		"""
 		READ IN THE DEM FILE AS NUMPY ARRAY
@@ -104,8 +113,8 @@ if __name__ == '__main__':
 		SEND IMAGE, ORBIT DATA TO APP
 		"""
 
-		#if not io_funcs.write_to_tablet(to_send):
-		#exit = 1
+		if not io_funcs.write_to_tablet(to_send):
+			exit = 1
 
 		"""
 		CLEAN UP FOR MEMORY MANAGEMENT
