@@ -31,6 +31,7 @@ def differ(arr1, arr2):
 
 #------- begin main program ---------
 if __name__ == '__main__':
+	#call('rm BathymetrySaverTool.dem', shell=True)
 	call('bash sandbox_start.sh', shell=True)
 	#------------ START THE SANDBOX ------------
 	'''call('/home/gravity/src/SARndbox-2.2/bin/SARndbox -uhm -fpv -rer 20 100 &', shell=True)
@@ -46,6 +47,7 @@ if __name__ == '__main__':
 	current_vel = [0.,0.]
 	exit = 0
 	#call('/home/gravity/src/SARndbox-2.2/bin/SARndbox -uhm -fpv -rer 20 100 &', shell=True)
+	call('xdotool keydown "B"', shell=True)
 	while exit == 0:
 		start =time.time()
 		"""
@@ -53,29 +55,31 @@ if __name__ == '__main__':
 		"""
 		
 		#call('wmctrl -a SARndbox', shell=True)
-		call('xdotool keydown "B"', shell=True)
-		call('xdotool keyup "B"', shell=True)
 		
 		"""
 		READ IN THE DEM FILE AS NUMPY ARRAY
 		"""
 		
-		dem_file = gdal.Open('/home/gravity/src/SARndbox-2.2/BathymetrySaverTool.dem')
+		dem_file = gdal.Open('/home/gravity/Desktop/grav_sandbox/gravity_sandbox/BathymetrySaverTool.dem')#('/home/gravity/src/SARndbox-2.2/BathymetrySaverTool.dem')
 		# Converts dem_file to numpy array of shape (480, 639)
 		dem_array = np.array(dem_file.GetRasterBand(1).ReadAsArray())
 		# This is a temporary fix for an uncalibrated surface, i.e. we set a base level where any value is less than 3
 		'''for x in np.nditer(dem_array, op_flags=['readwrite']):
 		    if x[...] < 3.:
 		        x[...] = 0.'''
+		print dem_array
 		fig = plt.figure()
-		plt.imshow(dem_array)
+		plt.imshow(np.log(dem_array), cmap='hsv')
 		plt.savefig('/home/gravity/Desktop/color_field.jpg')
+		#plt.show()
+		plt.close()
 		call('adb shell rm /storage/emulated/0/field.jpg', shell=True)
 		call('adb push /home/gravity/Desktop/color_field.jpg /storage/emulated/0/field.jpg', shell=True)
 		"""
 		CONVOLVE THE DEM-DENSITY FIELD WITH THE PLUMMER KERNEL
 		"""
 		shp = dem_array.shape
+		call('xdotool keyup "B"', shell=True)
 		convstart = time.time()
 		potential_field = np.reshape(convolution.convolve(dem_array, PLUMMER, 'kernel'),shp)
 		
@@ -83,10 +87,12 @@ if __name__ == '__main__':
 		potential_field = potential_field/np.max(potential_field)*10
 		convend = time.time()
 		print 'convolution took', convend-convstart
-		'''fig = plt.figure()
+		"""
+		fig = plt.figure()
 		plt.imshow(potential_field)
 		plt.show()
-		plt.close()'''
+		plt.close()
+		"""
 		"""
 		CHECK TO SEE IF WE ARE RUNNING ON NEW PARAMS?
 
@@ -126,4 +132,5 @@ if __name__ == '__main__':
 		print end-start, 'seconds have elapsed...'
 		#maybe refresh after REFRESH_RATE - (end-start) seconds if positive number?
 		time.sleep(1.)# - (end-start))
+
 
