@@ -21,7 +21,7 @@ ADB_FILEPATH = ''
 NORMALIZATION = 1.
 REFRESH_RATE = 1 #hz
 SLEEP_TIME = 1 #seconds
-ITER = 10000 #number of iteration to orbit over
+ITER = 1000 #number of iteration to orbit over
 
 def differ(arr1, arr2):
 	for k in range(len(arr1)):
@@ -32,7 +32,7 @@ def differ(arr1, arr2):
 #------- begin main program ---------
 if __name__ == '__main__':
 	#call('rm BathymetrySaverTool.dem', shell=True)
-	#call('bash sandbox_start.sh', shell=True)
+	call('bash sandbox_start.sh', shell=True)
 	#------------ START THE SANDBOX ------------
 	'''call('/home/gravity/src/SARndbox-2.2/bin/SARndbox -uhm -fpv -rer 20 100 &', shell=True)
 	call('sleep 1.0')
@@ -49,7 +49,7 @@ if __name__ == '__main__':
 	loops = 0
 	#call('/home/gravity/src/SARndbox-2.2/bin/SARndbox -uhm -fpv -rer 20 100 &', shell=True)
 	while exit == 0:
-		#call('xdotool keydown "b"', shell=True)
+		call('xdotool keydown "b"', shell=True)
 		start =time.time()
 		"""
 		REFRESH THE DEM FILE SAVED ON DISK
@@ -85,12 +85,12 @@ if __name__ == '__main__':
 		CONVOLVE THE DEM-DENSITY FIELD WITH THE PLUMMER KERNEL
 		"""
 		shp = dem_array.shape
-		#call('xdotool keyup "b"', shell=True)
+		call('xdotool keyup "b"', shell=True)
 		convstart = time.time()
 		potential_field = np.reshape(convolution.convolve(dem_array, PLUMMER, 'kernel'),shp)
 		
 		
-		potential_field = potential_field/np.max(np.absolute(potential_field))*10000
+		potential_field = potential_field/np.max(np.absolute(potential_field))*10000*2
 		convend = time.time()
 		print 'convolution took', convend-convstart
 		
@@ -110,15 +110,15 @@ if __name__ == '__main__':
 		input_pos, input_vel = io_funcs.read_from_app()
 		print input_pos
 		particle = gravity_algorithm2.Particle(current_pos, current_vel, potential_field)
-		'''if differ(input_pos, previous_pos) or differ(input_vel, previous_vel):
+		if differ(input_pos, previous_pos) or differ(input_vel, previous_vel):
 			particle = gravity_algorithm2.Particle(input_pos, input_vel, potential_field)
-			previous_pos = np.copy(input_pos); previous_vel = np.copy(input_vel)'''
+			previous_pos = np.copy(input_pos); previous_vel = np.copy(input_vel)
 		print particle.pos
 		"""
 		INTEGRATE FOR A WHILE
 		"""
 		int_time = time.time()
-		to_send = gravity_algorithm2.run_orbit(particle, ITER, loops=loops,step=0.001,edge_mode='reflect') #run for 1000 iterations and save the array
+		to_send = gravity_algorithm2.run_orbit(particle, ITER, loops=loops,step=0.01,edge_mode='reflect') #run for 1000 iterations and save the array
 		int_end = time.time()
 		print 'integration took', int_end-int_time		
 		loops += 1
