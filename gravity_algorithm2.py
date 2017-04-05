@@ -8,34 +8,44 @@ from astropy.convolution import convolve, convolve_fft
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.mlab as mlab
-import testing
+#import testing
 from scipy.optimize import curve_fit
 
 # gdal (Geospatial Data Access Library) module allows DEM file manipulation
 #import gdal
 import time
 
-start = time.time()
+
 
 class Particle():
     def __init__(self,pos,vel, potential):
         self.pot = potential
         dx, dy = np.gradient(potential)
-        self.dx = np.negative(dx)
-        self.dy = np.negative(dy)
-        self.MAXX = dx.shape[1]-1
+        self.dx = np.negative(dy)
+        self.dy = np.negative(dx)
+        self.MAXX = dx.shape[0]-2
         self.MIN = 0
-        self.MAXY = dy.shape[0]-1
+        self.MAXY = dy.shape[1]-2
+        print self.MAXX, self.MAXY
         self.pos = pos
+        self.prev_pos = np.copy(pos)
         self.vel = vel
-        self.acc = [self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]]
+        self.acc = [self.dx[int(self.pos[1]),int(self.pos[0])], self.dy[int(self.pos[1]),int(self.pos[0])]]
     def update_accel(self,pos):
-        self.acc = [self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]]
+        self.acc = [self.dx[int(self.pos[1]),int(self.pos[0])], self.dy[int(self.pos[1]),int(self.pos[0])]]
     def a(self):
-        return [self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]]
+        try:
+            return [self.dx[int(self.pos[1]),int(self.pos[0])], self.dy[int(self.pos[1]),int(self.pos[0])]]
+        except:
+            print 'OUT OF BOUNDS WITH POSITIONS (%i,%i)'%(self.pos[0], self.pos[1])
+            return [self.dx[int(self.prev_pos[1]),int(self.prev_pos[0])], self.dy[int(self.prev_pos[1]),int(self.prev_pos[0])]]
     def v(self,pos, step):
         temp_a = self.a()
         self.vel = [self.vel[0]+temp_a[0]*step, self.vel[1]+temp_a[1]*step]
+        if self.vel[1]>=self.MAXX:
+            self.vel[1] = self.MAXX/2.
+        if self.vel[0]>=self.MAXY:
+            self.vel[0] = self.MAXY/2.
         return self.vel
     def dynamic_timestep(self, step=0.1):
         p1 = self.rk4(step/2., self.pos)
@@ -109,6 +119,7 @@ class Particle():
                 self.pos[i] = p2[i]
         else:
             self.pos[i] = [x for x in p1]
+        self.prev_pos = np.copy(self.pos)
     def is_inbounds(self, edge_mode):
         self.edge_mode = edge_mode
         if edge_mode == 'stop':
@@ -226,8 +237,9 @@ def run_orbit2(test_particle):
             break
     return num_steps
 
-def run_orbit(test_particle, times = 1000, edge_mode='reflect'):
-    step = 0.001
+
+def run_orbit(test_particle, times = 1000, loops=0,step=0.001,edge_mode='reflect'):
+    #step = 0.001
     num_steps = 0
     posx = []; posy = []; fmatted = []
     for n in xrange(1, times):
@@ -236,6 +248,8 @@ def run_orbit(test_particle, times = 1000, edge_mode='reflect'):
             #print dt
             test_particle.update(step)
             fmatted.append((test_particle.pos[0], test_particle.pos[1]))
+            posx.append(test_particle.pos[0])
+            posy.append(test_particle.pos[1])
             '''if np.sum(time) >= 1:
                 to_sendx = np.interp(interp_points,time,posx)
                 to_sendy = np.interp(interp_points,time,posy)
@@ -247,6 +261,16 @@ def run_orbit(test_particle, times = 1000, edge_mode='reflect'):
                 posy = []'''
         else:
             break
+    start = time.time()
+    fig = plt.figure()
+    plt.imshow(test_particle.pot,vmax=0.5)
+    plt.plot(posx, posy, c='g', lw=5)
+    plt.savefig('../test_images/test_orbit%i.png'%(loops))
+    plt.close()
+    plt.xlim([0,480])
+    plt.ylim([0,640])
+    end = time.time()
+    print 'plotting took', end-start
     return fmatted
 
 def dynamic_orbit(test_particle, edge_mode='reflect'):
