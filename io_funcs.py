@@ -2,7 +2,8 @@ import sys
 import numpy as np
 from subprocess import call
 
-
+FACTORX = 360./639
+FACTORY = 270./480.
 
 def read_from_app():
 	#copy file using adb pull
@@ -11,7 +12,7 @@ def read_from_app():
 	data = f.readline().strip('(').replace(')', '').split()
 	for j in range(len(data)):
 		data[j] = float(data[j])
-	pos = np.array([data[0],data[1]])
+	pos = np.array([data[0]/FACTORX,data[1]/FACTORY])
 	vel = np.array([data[2]*10,data[3]*10])
 	obj = data[4]
 	f.close()
@@ -37,10 +38,8 @@ def plot_orbit(data, potential_field):
 
 def write_to_tablet(data):
 	f = open('/home/gravity/Desktop/grav_sandbox/algorithm_output.csv','w')
-	factorx = 1.#/(639./360)
-	factory = 1.#/(480/270.)
 	for k in range(len(data)):
-		f.write('\"%i\",\"%i\"\n'%(data[k][1]*factorx, data[k][0]*factory))
+		f.write('\"%i\",\"%i\"\n'%(data[k][1]*FACTORX, data[k][0]*FACTORY))
 	f.close()
 	#use adb push
 	try:
