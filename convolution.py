@@ -32,10 +32,10 @@ def fft_forward(arr):
 	try:
 	    wis = wisdom_parse.read_wisdom('forward_plan')
 	    pyfftw.import_wisdom(wis)
-	    transform = pyfftw.FFTW(inp, output, threads=4,flags='FFTW_WISDOM_ONLY')
+	    transform = pyfftw.FFTW(inp, output, threads=8,flags='FFTW_WISDOM_ONLY')
 	except:
 	    print 'No previous FFT Forward plan found, proceeding and saving one for later.'
-	    transform = pyfftw.FFTW(inp, output,threads=4)
+	    transform = pyfftw.FFTW(inp, output,threads=8)
 	    plan = pyfftw.export_wisdom()
 	    for i in range(len(plan)):
 	        f = open('forward_plan_%i.txt'%(i),'w')
@@ -56,10 +56,10 @@ def fft_backward(arr):
 	try:
 	    wis = wisdom_parse.read_wisdom('backward_plan')
 	    pyfftw.import_wisdom(wis)
-	    transform = pyfftw.FFTW(inp, output, threads=4,direction='FFTW_BACKWARD',flags='FFTW_WISDOM_ONLY')
+	    transform = pyfftw.FFTW(inp, output, threads=8,direction='FFTW_BACKWARD',flags='FFTW_WISDOM_ONLY')
 	except:
 	    print 'No previous FFT Backward plan found, proceeding and saving one for later.'
-	    transform = pyfftw.FFTW(inp, output,threads=4,direction='FFTW_BACKWARD')
+	    transform = pyfftw.FFTW(inp, output,threads=8,direction='FFTW_BACKWARD')
 	    plan = pyfftw.export_wisdom()
 	    for i in range(len(plan)):
 	        f = open('backward_plan_%i.txt'%(i),'w')

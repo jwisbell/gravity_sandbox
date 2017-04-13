@@ -20,32 +20,33 @@ import time
 class Particle():
     def __init__(self,pos,vel, potential):
         self.pot = potential
-        dx, dy = np.gradient(potential)
-        self.dx = np.negative(dy)
-        self.dy = np.negative(dx)
+        dx, dy = np.gradient(potential,16)
+        self.dx = np.negative(dx)
+        self.dy = np.negative(dy)
         self.MAXX = dx.shape[0]-2
+	print self.MAXX
         self.MIN = 0
         self.MAXY = dy.shape[1]-2
-        print self.MAXX, self.MAXY
         self.pos = pos
         self.prev_pos = np.copy(pos)
         self.vel = vel
-        self.acc = [self.dx[int(self.pos[1]),int(self.pos[0])], self.dy[int(self.pos[1]),int(self.pos[0])]]
+        self.acc = [self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]]
     def update_accel(self,pos):
-        self.acc = [self.dx[int(self.pos[1]),int(self.pos[0])], self.dy[int(self.pos[1]),int(self.pos[0])]]
+        self.acc = [self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]]
     def a(self):
         try:
-            return [self.dx[int(self.pos[1]),int(self.pos[0])], self.dy[int(self.pos[1]),int(self.pos[0])]]
+            return [self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]]
         except:
             print 'OUT OF BOUNDS WITH POSITIONS (%i,%i)'%(self.pos[0], self.pos[1])
-            return [self.dx[int(self.prev_pos[1]),int(self.prev_pos[0])], self.dy[int(self.prev_pos[1]),int(self.prev_pos[0])]]
+            return [self.dx[int(self.prev_pos[0]),int(self.prev_pos[1])], self.dy[int(self.prev_pos[0]),int(self.prev_pos[1])]]
     def v(self,pos, step):
         temp_a = self.a()
         self.vel = [self.vel[0]+temp_a[0]*step, self.vel[1]+temp_a[1]*step]
-        if self.vel[1]>=self.MAXX:
-            self.vel[1] = self.MAXX/2.
-        if self.vel[0]>=self.MAXY:
-            self.vel[0] = self.MAXY/2.
+	speed_lim = 25
+        if self.vel[1]>=speed_lim:
+            self.vel[1] = speed_lim
+        if self.vel[0]>=speed_lim:
+            self.vel[0] =speed_lim
         return self.vel
     def dynamic_timestep(self, step=0.1):
         p1 = self.rk4(step/2., self.pos)
@@ -125,32 +126,45 @@ class Particle():
         if edge_mode == 'stop':
             return self.pos[0] < self.MAXX and self.pos[0] > self.MIN and self.pos[1] < self.MAXY and self.pos[1] > self.MIN
         if edge_mode == 'reflect':
-            if self.pos[1] >= self.MAXX:
-                self.pos[1] = self.MAXX-1
-                self.vel[1] = self.vel[1] * -1
-                print 'BOUNCE'
-            elif self.pos[1] <= self.MIN:
-                self.pos[1] = self.MIN+1
-                self.vel[1] = self.vel[1] * -1
-                print 'BOUNCE'
-            elif self.pos[0] >= self.MAXY:
-                self.pos[0] = self.MAXY-1
+            if self.pos[0] >= 479:#self.MAXY:
+                self.pos[0] = 478#self.MAXY-1
                 self.vel[0] = self.vel[0] * -1
                 print 'BOUNCE'
-            elif self.pos[0] <= self.MIN:
-                self.pos[0] = self.MIN+1
-                self.vel[0] = self.vel[0] * -1
+		print self.pos, self.vel, '1 index'
+		#wait = input()
+            elif self.pos[0] <= 1:
+                print 'old pos,vel',self.pos, self.vel
+                self.pos[0] = 5
+                self.vel[0] = self.vel[0]* -1
                 print 'BOUNCE'
+                print 'new pos,vel',self.pos, self.vel
+		print self.pos, self.vel, '1 index'
+		#wait = input()
+            elif self.pos[1] >= 639:#self.MAXX:
+                self.pos[1] = 638#self.MAXX-1
+                self.vel[1] = self.vel[1] * -1
+		print 'BOUNCE'
+		print self.pos, self.vel, '0 index'
+		#wait = input()
+            elif self.pos[1] <= 1:
+                print 'old pos,vel',self.pos, self.vel
+                self.pos[1] = 5
+                self.vel[1] = self.vel[1] * -1
+                print 'BOUNCE'
+                print 'new pos,vel',self.pos, self.vel
+		print self.pos, self.vel, '0 index'
+		#wait = input()
+		print self.pos, self.vel
             return True
         if edge_mode == 'pacman':
-            if self.pos[1] >= self.MAXX:
+            if self.pos[1] >= self.MAXY:
                 self.pos[1] = self.MIN+1
             elif self.pos[1] <= self.MIN:
-                self.pos[1] = self.MAXX-1
-            elif self.pos[0] >= self.MAXY:
+                self.pos[1] = self.MAXY-1
+            elif self.pos[0] >= self.MAXX:
                 self.pos[0] = self.MIN+1 
             elif self.pos[0] <= self.MIN:
-                self.pos[0] = self.MAXY-1
+                self.pos[0] = self.MAXX-1
             return True
         
 
@@ -238,10 +252,12 @@ def run_orbit2(test_particle):
     return num_steps
 
 
-def run_orbit(test_particle, times = 1000, loops=0,step=0.001,edge_mode='reflect'):
+def run_orbit(test_particle, times = 1000, loops=0,step=0.001,edge_mode='pacman'):
     #step = 0.001
     num_steps = 0
     posx = []; posy = []; fmatted = []
+    init_pos = np.copy(test_particle.pos)
+    init_vel = np.copy(test_particle.vel)
     for n in xrange(1, times):
         if test_particle.is_inbounds(edge_mode):
             #dt = test_particle.get_time_step()
@@ -261,16 +277,33 @@ def run_orbit(test_particle, times = 1000, loops=0,step=0.001,edge_mode='reflect
                 posy = []'''
         else:
             break
-    start = time.time()
+    ''' start = time.time()
     fig = plt.figure()
     plt.imshow(test_particle.pot,vmax=0.5)
-    plt.plot(posx, posy, c='g', lw=5)
+    #plt.scatter(posy, posx, c='purple',edgecolors='none')
+    #plt.arrow(init_pos[1], init_pos[0], init_pos[1]+step*init_vel[1], init_pos[0]+step*init_vel[0], head_width=0.05, head_length=0.1, fc='k', ec='k')
     plt.savefig('../test_images/test_orbit%i.png'%(loops))
-    plt.close()
     plt.xlim([0,480])
     plt.ylim([0,640])
+    plt.close()
     end = time.time()
-    print 'plotting took', end-start
+    print 'plotting took', end-start'''
+
+    ''' fig = plt.figure()
+    distance = [np.sqrt((posx[k]-340)**2 + (posy[k] - 200)**2) for k in range(len(posy))]
+    plt.plot(xrange(1, times),distance)
+    plt.savefig('../timevdist.png',bbinches='tight')
+    plt.close()'''
+    '''from scipy.signal import argrelextrema	
+    y = argrelextrema(np.array(distance),np.greater)
+    u = argrelextrema(np.array(distance),np.less)
+    print y
+    print 'max and min of distance',(np.max(distance)+np.min(distance))/2
+    delta = []
+    for i in range(len(y)-1):
+	delta.append(y[i+1]-y[i])
+    print 'a, period'
+    print '%f,%f'%((np.max(distance[:len(distance)/2])+np.min(distance[:len(distance)/2]))/2, np.gradient(y[0])[0])'''
     return fmatted
 
 def dynamic_orbit(test_particle, edge_mode='reflect'):
