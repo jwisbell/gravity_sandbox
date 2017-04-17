@@ -54,6 +54,10 @@ def save_screenshot():
 	call("xwd -name SARndbox | convert xwd:- '/home/gravity/Desktop/color_field.jpg' ;", shell=True)
 	return	
 
+def idle_send():
+	call('adb shell rm /storage/emulated/0/sandbox/color_field.jpg', shell=True)
+	call('adb push /home/gravity/Desktop/color_field.jpg /storage/emulated/0/sandbox/color_field.jpg', shell=True)
+
 def write_to_tablet(data):
 	f = open('/home/gravity/Desktop/grav_sandbox/algorithm_output.csv','w')
 	for k in range(len(data)):
