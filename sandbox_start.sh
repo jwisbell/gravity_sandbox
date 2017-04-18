@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # Start Sandbox
-/home/gravity/src/SARndbox-2.2/bin/SARndbox -uhm -fpv -rer 20 100 &
+/home/gravity/src/SARndbox-2.2/bin/SARndbox -uhm -fpv -ws 0.0 0 -s 1000.0 &
 
 sleep 1.0;
 # Make Sandbox active window
