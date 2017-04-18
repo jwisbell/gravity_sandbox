@@ -21,7 +21,8 @@ ADB_FILEPATH = ''
 NORMALIZATION = 1.
 REFRESH_RATE = 1 #hz
 SLEEP_TIME = 1 #seconds
-ITER = 50000 #number of iteration to orbit over
+ITER = 100000 #number of iteration to orbit over
+POTENTIAL_NORM = 7500.
 
 def differ(arr1, arr2):
 	for k in range(len(arr1)):
@@ -42,7 +43,8 @@ if __name__ == '__main__':
 	current_vel = [vel,0] # vy, vx
 	exit = 0
 	loops = 0
-	idle = True; idle_time = 10*60; waiting = time.time()
+	idle = False
+	idle_time = 10*60; waiting = time.time()
 	#call('/home/gravity/src/SARndbox-2.2/bin/SARndbox -uhm -fpv -rer 20 100 &', shell=True)
 	while exit == 0:
 		if not idle:
@@ -55,12 +57,12 @@ if __name__ == '__main__':
 			READ IN THE DEM FILE AS NUMPY ARRAY
 			"""
 			get_dem_start = time.time()
-			call('xdotool mousemove_relative 0 400; ', shell=True) # move the mouse to get it out of screenshot
+			call('xdotool mousemove_relative 0 350; ', shell=True) # move the mouse to get it out of screenshot
 			call("xwd -name SARndbox | convert xwd:- '/home/gravity/Desktop/color_field.jpg' ;", shell=True)
 			dem_file = gdal.Open('/home/gravity/Desktop/grav_sandbox/gravity_sandbox/BathymetrySaverTool.dem')#('/home/gravity/src/SARndbox-2.2/BathymetrySaverTool.dem')
 			# Converts dem_file to numpy array of shape (480, 639)
 			dem_array = np.array(dem_file.GetRasterBand(1).ReadAsArray())
-			dem_array = dem_array-np.median(dem_array)
+			dem_array = dem_array#-np.median(dem_array)
 			get_dem_end = time.time()
 			print "Getting DEM took: ",get_dem_end-get_dem_start
 
@@ -83,19 +85,19 @@ if __name__ == '__main__':
 			call('xdotool keyup "b"', shell=True)
 			convstart = time.time()
 			potential_field = np.reshape(convolution.convolve(dem_array, PLUMMER, 'kernel'),shp)
-			
-			potential_field = np.negative(potential_field/np.max(np.absolute(potential_field)))*10000*2
+			print 'it got here'
+			potential_field = np.negative(potential_field/POTENTIAL_NORM)
 			med = 0.#np.median(potential_field)/5.
 			convend = time.time()
 			print 'convolution took', convend-convstart
 
 			fig = plt.figure(figsize=(6.3,5))
-			im1 = plt.imshow(potential_field,vmax=0.5,origin='upper')
+			im1 = plt.imshow(potential_field,vmin=-10,vmax=20,origin='upper')
 	            	im1.axes.get_xaxis().set_visible(False)
 	        	im1.axes.get_yaxis().set_visible(False)
 			extent = im1.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
 			plt.savefig('../potential_field.png',bbox_inches=extent,transparent=True, pad=0.)
-			#plt.show()
+			plt.show()
 			plt.close()
 
 			field_edge = 20
@@ -132,7 +134,7 @@ if __name__ == '__main__':
 			INTEGRATE FOR A WHILE
 			"""
 			int_time = time.time()
-			to_send = gravity_algorithm2.run_orbit(particle, ITER, loops=loops,step=0.05,edge_mode='reflect') #run for 1000 iterations and save the array
+			to_send = gravity_algorithm2.run_orbit(particle, ITER, loops=loops,step=0.005,edge_mode='reflect') #run for 1000 iterations and save the array
 			int_end = time.time()
 			print 'integration took', int_end-int_time		
 			loops += 1
@@ -164,7 +166,7 @@ if __name__ == '__main__':
 			end = time.time()
 			print end-start, 'seconds have elapsed...'
 			#maybe refresh after REFRESH_RATE - (end-start) seconds if positive number?
-			time.sleep(0.3)
+			time.sleep(1.5)
 			if time.time() - waiting >= idle_time:
 				idle=True
 		else:
