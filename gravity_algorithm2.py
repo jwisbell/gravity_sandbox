@@ -8,7 +8,7 @@ from astropy.convolution import convolve, convolve_fft
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.mlab as mlab
-#import testing
+import testing
 from scipy.optimize import curve_fit
 
 # gdal (Geospatial Data Access Library) module allows DEM file manipulation
@@ -20,7 +20,7 @@ import time
 class Particle():
     def __init__(self,pos,vel, potential):
         self.pot = potential
-        dx, dy = np.gradient(potential,16)
+        dx, dy = np.gradient(potential,1)
         self.dx = np.negative(dx)
         self.dy = np.negative(dy)
         self.MAXX = dx.shape[0]-2
@@ -48,6 +48,13 @@ class Particle():
         if self.vel[0]>=speed_lim:
             self.vel[0] =speed_lim
         return self.vel
+    def leapfrog(self,step=0.01):
+        new_pos = np.array(self.pos) + np.array(self.vel) * step + (0.5 * step**2 * np.array(self.a()))
+        new_accel = np.array([self.dx[int(new_pos[0]),int(new_pos[1])], self.dy[int(new_pos[0]),int(new_pos[1])]])
+        new_vel = self.vel + 0.5*(np.array(self.a()) + new_accel)*step
+        self.pos = np.copy(new_pos)
+        self.vel = np.copy(new_vel)
+
     def dynamic_timestep(self, step=0.1):
         p1 = self.rk4(step/2., self.pos)
         temp_pos = p1
@@ -107,20 +114,26 @@ class Particle():
             return 0.00125
         else:
             return 0.001
-    def update(self,step): 
-        #p1 = [self.pos[i] + self.vel[i]*step for i in range(len(self.pos))]
-        p1 = self.rk4(step/2., self.pos)
-        #v1 = self.rk4(step, self.vel)
-        #p2 = [self.pos[i] + self.vel[i]*(step/2.0) for i in range(len(self.pos))]
-        if self.is_inbounds(self.edge_mode):
-            self.update_accel(p1)
-            p2 = self.rk4(step/2., p1)
-            #v2 = self.rk4(step/2.0, self.vel)
-            for i in range(2):
-                self.pos[i] = p2[i]
-        else:
-            self.pos[i] = [x for x in p1]
-        self.prev_pos = np.copy(self.pos)
+    def energy(self):
+        return (0.5*(self.vel[0]**2 + self.vel[1]**2) + self.pot[self.pos[0], self.pos[1]])
+    def update(self,step,kind='rk4'): 
+        if kind == 'rk4':
+            #p1 = [self.pos[i] + self.vel[i]*step for i in range(len(self.pos))]
+            p1 = self.rk4(step/2., self.pos)
+            #v1 = self.rk4(step, self.vel)
+            #p2 = [self.pos[i] + self.vel[i]*(step/2.0) for i in range(len(self.pos))]
+            if self.is_inbounds(self.edge_mode):
+                self.update_accel(p1)
+                p2 = self.rk4(step/2., p1)
+                #v2 = self.rk4(step/2.0, self.vel)
+                for i in range(2):
+                    self.pos[i] = p2[i]
+            else:
+                self.pos[i] = [x for x in p1]
+            self.prev_pos = np.copy(self.pos)
+        elif kind == 'leapfrog':
+            self.prev_pos = np.copy(self.pos)
+            self.leapfrog(step)
     def is_inbounds(self, edge_mode):
         self.edge_mode = edge_mode
         if edge_mode == 'stop':
@@ -210,7 +223,7 @@ def leap(pos,vel):
 
 ## Energy Conservation: K+U; K is 0.5v^2 and U is index on the potential.
 def e(pos,vel):
-    return (0.5*np.sum(np.square(vel)) + potential[np.rint(pos[0]).astype(int)][np.rint(pos[1]).astype(int)])
+    return (0.5*np.sum(np.square(vel)) - potential[np.rint(pos[0]).astype(int)][np.rint(pos[1]).astype(int)])
 # Needs further calibration: energy conservation violation becomes a problem as step size increases
 
 
@@ -252,17 +265,16 @@ def run_orbit2(test_particle):
     return num_steps
 
 
-def run_orbit(test_particle, times = 1000, loops=0,step=0.001,edge_mode='pacman'):
+def run_orbit(test_particle, times = 1000,loops=0,step=0.001,edge_mode='pacman',kind='rk4'):
     #step = 0.001
     num_steps = 0
-    posx = []; posy = []; fmatted = []
+    posx = []; posy = []; fmatted = []; energy = []
     init_pos = np.copy(test_particle.pos)
     init_vel = np.copy(test_particle.vel)
     for n in xrange(1, times):
         if test_particle.is_inbounds(edge_mode):
-            #dt = test_particle.get_time_step()
-            #print dt
-            test_particle.update(step)
+            test_particle.update(step,kind)
+            energy.append(test_particle.energy())
             fmatted.append((test_particle.pos[0], test_particle.pos[1]))
             posx.append(test_particle.pos[0])
             posy.append(test_particle.pos[1])
@@ -277,17 +289,18 @@ def run_orbit(test_particle, times = 1000, loops=0,step=0.001,edge_mode='pacman'
                 posy = []'''
         else:
             break
-    ''' start = time.time()
+    start = time.time()
     fig = plt.figure()
     plt.imshow(test_particle.pot,vmax=0.5)
-    #plt.scatter(posy, posx, c='purple',edgecolors='none')
+    plt.scatter(posy, posx, c='purple',edgecolors='none',s=2)
     #plt.arrow(init_pos[1], init_pos[0], init_pos[1]+step*init_vel[1], init_pos[0]+step*init_vel[0], head_width=0.05, head_length=0.1, fc='k', ec='k')
-    plt.savefig('../test_images/test_orbit%i.png'%(loops))
+    plt.title(r'Test Orbit using %s with $\Delta t = %.3f$'%(kind, step))
     plt.xlim([0,480])
     plt.ylim([0,640])
+    plt.savefig('test_orbit%s.png'%(kind))
     plt.close()
     end = time.time()
-    print 'plotting took', end-start'''
+    print 'plotting took', end-start
 
     ''' fig = plt.figure()
     distance = [np.sqrt((posx[k]-340)**2 + (posy[k] - 200)**2) for k in range(len(posy))]
@@ -304,6 +317,17 @@ def run_orbit(test_particle, times = 1000, loops=0,step=0.001,edge_mode='pacman'
 	delta.append(y[i+1]-y[i])
     print 'a, period'
     print '%f,%f'%((np.max(distance[:len(distance)/2])+np.min(distance[:len(distance)/2]))/2, np.gradient(y[0])[0])'''
+    fig,ax = plt.subplots(2,sharex=True)
+    ax[0].scatter(np.arange(len(energy)), energy,s=5)
+    ax[0].set_ylabel('Energy of Particle')
+    ax[0].set_xlabel('Time')
+    #ax[1].imshow(test_particle.pot,vmax=0.5)
+    #ax[1].scatter(posy, posx, c='purple',edgecolors='none')
+    distance = [np.sqrt((posx[k]-300)**2 + (posy[k] - 300)**2) for k in range(len(posy))]
+    ax[1].plot(np.arange(len(distance)),distance)
+    ax[1].set_ylabel('Radial Distance from Point Mass')
+    plt.suptitle(r'Energy and Radial Position for %s with $\Delta t = %.4f$'%(kind, step))
+    plt.savefig('testing_'+kind+'_%.3f.png'%(step))
     return fmatted
 
 def dynamic_orbit(test_particle, edge_mode='reflect'):
@@ -383,7 +407,12 @@ if __name__ == '__main__':
     MIN = 0
     MAXY = dy.shape[0]-1
 
-    velocity = -np.sqrt(1./(350-300))
+    test_particle = Particle([300,330],[1/np.sqrt(30),0],potential)
+    run_orbit(test_particle, 2*500000,step=0.01,kind='rk4')
+    test_particle = Particle([300,330],[1/np.sqrt(30),0],potential)
+    run_orbit(test_particle, 2*500000,step=0.01,kind='leapfrog')
+
+    '''velocity = -np.sqrt(1./(350-300))
     test_particle = Particle([300,320],[.32,0.], potential)
     start_static = time.time()
     x = run_orbit2(test_particle)
@@ -429,6 +458,5 @@ if __name__ == '__main__':
 
     time = time.time() - start
     print time                # Benchmark time
-    plt.show()
+    plt.show()'''
 
-    #### FINAL NOTES: There still needs to be code written to replace the "Sample Values" with an IMPORTED .txt file from the interface team to define intial positions and velocities. Also, there needs to be code written to OUTPUT a .txt file of x and y position and time for the interface team. 
