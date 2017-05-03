@@ -22,9 +22,9 @@ NORMALIZATION = 1.
 REFRESH_RATE = 1 #hz
 SLEEP_TIME = 1 #seconds
 #ITER = 15000 #number of iteration to orbit over
-POTENTIAL_NORM = 7500.
+POTENTIAL_NORM = 5000#7500.
 INT_SECONDS = 3.5
-ITER = int(10000 * (INT_SECONDS - 2.1))
+ITER = int(11000 * (INT_SECONDS - 2.2))
 
 
 def differ(arr1, arr2):
@@ -91,7 +91,7 @@ if __name__ == '__main__':
 			potential_field = np.reshape(convolution.convolve(dem_array, PLUMMER, 'kernel'),shp)
 			print 'it got here'
 			potential_field = np.negative(potential_field/POTENTIAL_NORM)
-			med = 0.#np.median(potential_field)/5.
+			med = np.median(potential_field)/5.
 			convend = time.time()
 			print 'convolution took', convend-convstart
 
@@ -105,10 +105,10 @@ if __name__ == '__main__':
 			plt.close()
 
 			field_edge = 10
-			potential_field[:,0:field_edge] = 0
-			potential_field[:,(-1 * field_edge):] = 0
+			potential_field[:,0:field_edge] = med
+			potential_field[:,(-1 * field_edge):] = med
 			potential_field[0:field_edge,:] = med
-			potential_field[(-1 * field_edge):,:] = 0
+			potential_field[(-1 * field_edge):,:] = med
 
 			#----------- for testing only ------------------
 			

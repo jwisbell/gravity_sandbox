@@ -20,7 +20,7 @@ import time
 class Particle():
     def __init__(self,pos,vel, potential):
         self.pot = potential
-        dx, dy = np.gradient(potential,1)
+        dx, dy = np.gradient(potential,4)
         self.dx = np.negative(dx)
         self.dy = np.negative(dy)
         self.MAXX = dx.shape[0]-2
@@ -50,7 +50,10 @@ class Particle():
         return self.vel
     def leapfrog(self,step=0.01):
         new_pos = np.array(self.pos) + np.array(self.vel) * step + (0.5 * step**2 * np.array(self.a()))
-        new_accel = np.array([self.dx[int(new_pos[0]),int(new_pos[1])], self.dy[int(new_pos[0]),int(new_pos[1])]])
+	try:
+       		new_accel = np.array([self.dx[int(new_pos[0]),int(new_pos[1])], self.dy[int(new_pos[0]),int(new_pos[1])]])
+	except:
+		new_accel = np.array(self.a())
         new_vel = self.vel + 0.5*(np.array(self.a()) + new_accel)*step
         self.pos = np.copy(new_pos)
         self.vel = np.copy(new_vel)
@@ -274,7 +277,7 @@ def run_orbit(test_particle, times = 1000,loops=0,step=0.001,edge_mode='pacman',
     for n in xrange(1, times):
         if test_particle.is_inbounds(edge_mode):
             test_particle.update(step,kind)
-            energy.append(test_particle.energy())
+            #energy.append(test_particle.energy())
             fmatted.append((test_particle.pos[0], test_particle.pos[1]))
             posx.append(test_particle.pos[0])
             posy.append(test_particle.pos[1])
@@ -289,7 +292,7 @@ def run_orbit(test_particle, times = 1000,loops=0,step=0.001,edge_mode='pacman',
                 posy = []'''
         else:
             break
-    start = time.time()
+    '''start = time.time()
     fig = plt.figure()
     plt.imshow(test_particle.pot,vmax=0.5)
     plt.scatter(posy, posx, c='purple',edgecolors='none',s=2)
@@ -300,7 +303,7 @@ def run_orbit(test_particle, times = 1000,loops=0,step=0.001,edge_mode='pacman',
     plt.savefig('test_orbit%s.png'%(kind))
     plt.close()
     end = time.time()
-    print 'plotting took', end-start
+    print 'plotting took', end-start'''
 
     ''' fig = plt.figure()
     distance = [np.sqrt((posx[k]-340)**2 + (posy[k] - 200)**2) for k in range(len(posy))]
@@ -317,7 +320,8 @@ def run_orbit(test_particle, times = 1000,loops=0,step=0.001,edge_mode='pacman',
 	delta.append(y[i+1]-y[i])
     print 'a, period'
     print '%f,%f'%((np.max(distance[:len(distance)/2])+np.min(distance[:len(distance)/2]))/2, np.gradient(y[0])[0])'''
-    fig,ax = plt.subplots(2,sharex=True)
+# ------------------------
+    '''fig,ax = plt.subplots(2,sharex=True)
     ax[0].scatter(np.arange(len(energy)), energy,s=5)
     ax[0].set_ylabel('Energy of Particle')
     ax[0].set_xlabel('Time')
@@ -327,7 +331,7 @@ def run_orbit(test_particle, times = 1000,loops=0,step=0.001,edge_mode='pacman',
     ax[1].plot(np.arange(len(distance)),distance)
     ax[1].set_ylabel('Radial Distance from Point Mass')
     plt.suptitle(r'Energy and Radial Position for %s with $\Delta t = %.4f$'%(kind, step))
-    plt.savefig('testing_'+kind+'_%.3f.png'%(step))
+    plt.savefig('testing_'+kind+'_%.3f.png'%(step))'''
     return fmatted
 
 def dynamic_orbit(test_particle, edge_mode='reflect'):
