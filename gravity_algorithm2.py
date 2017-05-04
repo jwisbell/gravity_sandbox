@@ -18,9 +18,9 @@ import time
 
 
 class Particle():
-    def __init__(self,pos,vel, potential):
+    def __init__(self,pos,vel, potential,smoothness=4):
         self.pot = potential
-        dx, dy = np.gradient(potential,4)
+        dx, dy = np.gradient(potential,smoothness)
         self.dx = np.negative(dx)
         self.dy = np.negative(dy)
         self.MAXX = dx.shape[0]-2

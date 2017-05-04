@@ -10,7 +10,7 @@ PTS2SEND = 250
 
 
 
-def read_from_app():
+def read_from_app(vel_scaling=1.):
 	#copy file using adb pull
 	call('adb pull /storage/emulated/0/sandbox/algorithm_input.txt /home/gravity/Desktop/grav_sandbox/algorithm_input.txt', shell=True)
 	f = open('/home/gravity/Desktop/grav_sandbox/algorithm_input.txt','r')
@@ -23,7 +23,7 @@ def read_from_app():
 	deltay = data[5]
 	angle = np.arctan2(deltay,deltax) #+ np.pi/2
 
-	mag = data[3]*VEL_FACTOR
+	mag = data[3]*VEL_FACTOR*vel_scaling
 	vel = np.array([np.cos(angle)*mag, np.sin(angle)*mag])
 	#obj = data[4]
 	f.close()

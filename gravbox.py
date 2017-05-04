@@ -6,6 +6,7 @@ import numpy as np
 from astropy.io import fits
 import matplotlib.pyplot as plt
 from multiprocessing import Process
+from optparse import OptionParser
 
 #------- Import our files ---------
 import gravity_algorithm2
@@ -25,6 +26,17 @@ SLEEP_TIME = 1 #seconds
 POTENTIAL_NORM = 5000#7500.
 INT_SECONDS = 3.5
 ITER = int(11000 * (INT_SECONDS - 2.2))
+vel_scaling = 1.
+verbose = True
+SF = 4
+
+parser = OptionParser()
+parser.add_option("-i", "--idle", dest="idle_time", type='float', help="Set the amount of time (in seconds) until idle mode begins (default 600)")
+parser.add_option("-t", "--timing", dest="INT_SECONDS", type='float', help="Set the number of seconds per iteration you would like (default 3.5)")
+parser.add_option("-vs", "--velocity", dest="vel_scaling", type='float', help="Set a scaling factor for the input velocities (default 1.0)")
+parser.add_option("-vb", "--verbose", dest="verbose", type='boolean',"If this flag is set to true, save the potential field as a .png image")
+parser.add_option("-sm", "--smoothness", dest="SF", type='int', help="Smoothness factor for gradient calculation. Lower values make particle more sensitive to noise. Default is 4")
+(options, args) = parser.parse_args()
 
 
 def differ(arr1, arr2):
@@ -70,18 +82,7 @@ if __name__ == '__main__':
 			get_dem_end = time.time()
 			print "Getting DEM took: ",get_dem_end-get_dem_start
 
-			# This is a temporary fix for an uncalibrated surface, i.e. we set a base level where any value is less than 3
-			'''for x in np.nditer(dem_array, op_flags=['readwrite']):
-			    if x[...] < 3.:
-			        x[...] = 0.'''
-			'''fig = plt.figure()
-			im1 = plt.imshow(dem_array, cmap='cool')
-		        plt.axis('off')
-	        	im1.axes.get_xaxis().set_visible(False)
-	        	im1.axes.get_yaxis().set_visible(False)
-	        	#plt.savefig('/home/gravity/Desktop/color_field.jpg',bbinches='tight')
-			plt.show()
-			plt.close()'''
+			
 			"""
 			CONVOLVE THE DEM-DENSITY FIELD WITH THE PLUMMER KERNEL
 			"""
@@ -95,14 +96,15 @@ if __name__ == '__main__':
 			convend = time.time()
 			print 'convolution took', convend-convstart
 
-			fig = plt.figure(figsize=(6.3,5))
-			im1 = plt.imshow(potential_field,vmin=-10,vmax=20,origin='upper')
-	            	im1.axes.get_xaxis().set_visible(False)
-	        	im1.axes.get_yaxis().set_visible(False)
-			extent = im1.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-			plt.savefig('../potential_field.png',bbox_inches=extent,transparent=True, pad=0.)
-			#plt.show()
-			plt.close()
+			if verbose:
+				fig = plt.figure(figsize=(6.3,5))
+				im1 = plt.imshow(potential_field,vmin=-10,vmax=20,origin='upper')
+		            	im1.axes.get_xaxis().set_visible(False)
+		        	im1.axes.get_yaxis().set_visible(False)
+				extent = im1.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+				plt.savefig('../potential_field.png',bbox_inches=extent,transparent=True, pad=0.)
+				#plt.show()
+				plt.close()
 
 			field_edge = 10
 			potential_field[:,0:field_edge] = med
@@ -126,11 +128,11 @@ if __name__ == '__main__':
 			READ IN INPUT PARAMS AND UPDATE PARTICLE IF NEEDED
 			"""
 			get_inpt_s = time.time()
-			input_pos, input_vel = io_funcs.read_from_app()
+			input_pos, input_vel = io_funcs.read_from_app(vel_scaling)
 			print input_pos
-			particle = gravity_algorithm2.Particle(current_pos, current_vel, potential_field)
+			particle = gravity_algorithm2.Particle(current_pos, np.array(current_vel), potential_field, smoothness=SF)
 			if differ(input_pos, previous_pos) or differ(input_vel, previous_vel):
-				particle = gravity_algorithm2.Particle(input_pos, input_vel, potential_field)
+				particle = gravity_algorithm2.Particle(input_pos, np.array(input_vel), potential_field,smoothness=SF)
 				previous_pos = np.copy(input_pos); previous_vel = np.copy(input_vel)
 				waiting = time.time()
 			print 'getting input takes: ', time.time()-get_inpt_s
@@ -177,6 +179,8 @@ if __name__ == '__main__':
 			time.sleep(1.5)
 			if time.time() - waiting >= idle_time:
 				idle=True
+			sys.stdout.flush()
+
 		else:
 			call('xdotool mousemove_relative 0 350; ', shell=True) # move the mouse to get it out of screenshot
 			call('xdotool keydown "b"', shell=True)	
@@ -188,5 +192,6 @@ if __name__ == '__main__':
 			call('xdotool keyup "b"', shell=True)
 			call("xwd -name SARndbox | convert xwd:- '/home/gravity/Desktop/color_field.jpg' ;", shell=True)
 			io_funcs.idle_send()
+			sys.stdout.flush()
 
 
