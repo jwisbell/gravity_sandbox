@@ -1,2 +1,0 @@
-(fftw-3.3.4 fftwl_wisdom #x2fa95cff #x06d4b84e #x4020c7e8 #xcc9b0a2b
-)
