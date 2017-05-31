@@ -80,27 +80,27 @@ def convolve(arr1, arr2):
 	return tform3
 
 def convolve(arr1, x_kernel,y_kernel, arr_type):
-	#arr1 = arr1.flatten() 
+	arr1 = arr1.flatten() 
 	#print len(arr1)
-	#orig_len = len(arr1)
-	#if len(arr1) != len(x_kernel):
-		#arr1 = pad(arr1, len(x_kernel))
-	#tform2 = fft_forward(arr1)
+	orig_len = len(arr1)
+	if len(arr1) != len(x_kernel):
+		arr1 = pad(arr1, len(x_kernel))
+	tform2 = fft_forward(arr1)
 	#temp = [x[0] for x in tform2]
 	#print x_kernel[0]
 	#print tform2, tform1[0]	
-	#gx = np.array(x_kernel[0])*tform2
-	#gy = np.array(y_kernel[0])*tform2
+	gx = x_kernel*tform2
+	gy = y_kernel*tform2
 	#print to_tform, to_tform.shape
-	#gx = fft_backward(gx)
-	#gy = fft_backward(gy)
+	gx = fft_backward(gx)
+	gy = fft_backward(gy)
 	#print tform3
 	
 	#print len(gx)
-	gx = signal.convolve(arr1, x_kernel,mode='same')
-	gy = signal.convolve(arr1, y_kernel,mode='same')
-	#gx = unpad(gx, orig_len)
-	#gy = unpad(gy, orig_len)
+	#gx = signal.convolve(arr1, x_kernel,mode='same')
+	#gy = signal.convolve(arr1, y_kernel,mode='same')
+	gx = unpad(gx, orig_len)
+	gy = unpad(gy, orig_len)
 	#print tform4.shape
 	return gx,gy
 

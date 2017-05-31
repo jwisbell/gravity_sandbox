@@ -74,8 +74,8 @@ if __name__ == '__main__':
 		previous_pos, previous_vel = io_funcs.read_from_app()
 	# ----- INITIAL VALUES AND CONSTANTS -------------
 	PLUMMER = fits.getdata('./aux/PlummerDFT.fits',0)
-	X_KERNEL = fits.getdata('./aux/dx_kernel.fits',0)  
-	Y_KERNEL = fits.getdata('./aux/dy_kernel.fits',0)
+	X_KERNEL = np.load('dxDFT.npy')#fits.getdata('./aux/dx_kernel.fits',0)  
+	Y_KERNEL = np.load('dyDFT.npy') #fits.getdata('./aux/dy_kernel.fits',0)
 	#temp = [x[0] for x in X_KERNEL]
 	#X_KERNEL = np.copy(temp)
 	#print 'hello'
@@ -211,7 +211,7 @@ if __name__ == '__main__':
 			sys.stdout.flush()
 		if debug ==1:
 			print 'here we are'
-			dem_array = np.zeros((480,639))
+			dem_array = np.zeros((480,639))+4
 			dem_array[240,320] = 10
 			#dem_array = np.rot90(dem_array,2)
 		
@@ -220,8 +220,8 @@ if __name__ == '__main__':
 			CONVOLVE THE DEM-DENSITY FIELD WITH THE PLUMMER KERNEL
 			"""
 			shp = dem_array.shape
-			call('xdotool keyup "b"', shell=True)
-			print X_KERNEL
+
+
 			gx,gy = convolution.convolve(dem_array, X_KERNEL,Y_KERNEL,'kernel')
 			gx = np.reshape(gx,shp)
 			gy = np.reshape(gy,shp)
@@ -229,23 +229,6 @@ if __name__ == '__main__':
 			gy = np.negative(gy)
 			print gx
 
-
-
-			if verbose:
-				fig = plt.figure(figsize=(6.3,5))
-				im1 = plt.imshow(potential_field,vmin=-10,vmax=20,origin='upper')
-		            	im1.axes.get_xaxis().set_visible(False)
-		        	im1.axes.get_yaxis().set_visible(False)
-				extent = im1.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-				plt.savefig('../potential_field.png',bbox_inches=extent,transparent=True, pad=0.)
-				#plt.show()
-				plt.close()
-
-			"""
-			CHECK TO SEE IF WE ARE RUNNING ON NEW PARAMS?
-
-			READ IN INPUT PARAMS AND UPDATE PARTICLE IF NEEDED
-"""
 			particle = gravity_algorithm2.Particle(current_pos, np.array(current_vel), (gx,gy))
 			
 			"""
