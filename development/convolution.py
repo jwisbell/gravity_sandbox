@@ -84,11 +84,12 @@ def convolve(arr1, x_kernel,y_kernel, arr_type):
 	#print len(arr1)
 	orig_len = len(arr1)
 	if len(arr1) != len(x_kernel):
-		arr1 = pad(arr1, len(x_kernel))
+		arr1 = pad(arr1, 2*(len(x_kernel)-1))
 	tform2 = fft_forward(arr1)
 	#temp = [x[0] for x in tform2]
 	#print x_kernel[0]
-	#print tform2, tform1[0]	
+	#print tform2, tform1[0]
+	print len(tform2), len(arr1), len(x_kernel)	
 	gx = x_kernel*tform2
 	gy = y_kernel*tform2
 	#print to_tform, to_tform.shape
