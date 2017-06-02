@@ -54,7 +54,7 @@ Plumlist.writeto('dy_kernel.fits', clobber = True)   # Save kernel as .FITS file
     
 #perform DFT on entire kernel
 oned = np.reshape(dx,-1)
-inp=pyfftw.empty_aligned(len(oned),dtype='float32',n=16)
+'''inp=pyfftw.empty_aligned(len(oned),dtype='float32',n=16)
 for i in range(len(inp)):
 	inp[i]=oned[i] 
 output=pyfftw.empty_aligned(len(oned)//2+1, dtype='complex64',n=16)#np.zeros(oned.shape)
@@ -82,12 +82,29 @@ for i in range(len(inp)):
 	inp[i]=oned[i] 
 output[:] = np.ones(len(output)) 
 start = time.time()
-DFT = transform()
-print DFT
+DFT = transform()'''
+start = time.time()
+a = pyfftw.empty_aligned(dx.shape, dtype='float32')
+transform = pyfftw.builders.fft2(a)
+'''for x in range(a.shape[0]):
+	for y in range(a.shape[1]):
+		a[x,y] = arr[x,y]'''
+a[:,:] = dx[:,:]
+np.nan_to_num(a)
+tform1 = transform()
+print np.max(tform1)
+
+
+a[:,:] = dy[:,:]
+tform2 = transform()
+
+
+
+#print DFT
 end = time.time()
 print end-start
-print DFT
-np.save('dxDFT.npy', DFT)
+np.save('dxDFT.npy', np.fft.fft2(dx))
+np.save('dyDFT.npy', np.fft.fft2(dy))
 
 #write DFT of Plummer Kernel to FITS table
 #column = fits.Column(name='dyDFT',format='M',array=DFT)

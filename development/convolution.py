@@ -117,15 +117,13 @@ def convolve(arr1, x_kernel,y_kernel, arr_type):
 def convolve2d(arr, x_kernel, y_kernel):
 	#need to zero pad
 	bck = np.zeros(x_kernel.shape)
-	dx = abs(arr1.shape[0] - x_kernel.shape[0])/2
-	dy = abs(arr1.shape[1] - x_kernel.shape[1])/2
-	bck[dx:-dx, dy:-dy-1] = arr1
+	dx = abs(arr.shape[0] - x_kernel.shape[0])/2
+	dy = abs(arr.shape[1] - x_kernel.shape[1])/2
+	bck[dx:-dx, dy:-dy-1] = arr
 	
 	a = pyfftw.empty_aligned(bck.shape, dtype='float32')
 	transform = pyfftw.builders.fft2(a)
-	'''for x in range(a.shape[0]):
-		for y in range(a.shape[1]):
-			a[x,y] = arr[x,y]'''
+	
 	a[:,:] = bck[:,:]
 	tform1 = transform()
 	
@@ -133,18 +131,31 @@ def convolve2d(arr, x_kernel, y_kernel):
 	gy = y_kernel*tform1
 
 	b = pyfftw.empty_aligned(gx.shape, dtype='complex64')
-	inverse = pyfftw.builders.irfft2(b)
+	inverse = pyfftw.builders.ifft2(b)
 	
 	b[:,:] = gx[:,:]
 
-	gx = inverse()
+	gx_wrapped = inverse()
 	
 	b[:,:] = gy[:,:]
 	
-	gy = inverse()
+	gy_wrapped = inverse()
 
-	#unpad?
-	return gx[dx:-dx, dy:-dy-1], gy[dx:-dx, dy:-dy-1]		
+	framework = np.zeros((gx_wrapped.shape[0]*2, gx_wrapped.shape[1]*2))
+	framework[:gx_wrapped.shape[0], :gx_wrapped.shape[1]] = gx_wrapped
+	framework[:gx_wrapped.shape[0], gx_wrapped.shape[1]:] = gx_wrapped
+	framework[gx_wrapped.shape[0]:, :gx_wrapped.shape[1]] = gx_wrapped
+	framework[gx_wrapped.shape[0]:, gx_wrapped.shape[1]:] = gx_wrapped
+	wx = float(framework.shape[0]); wy = float(framework.shape[1])
+	gx = framework[wx/2-240:wx/2+240, wy/2-320:wy/2+319]
+
+	framework[:gy_wrapped.shape[0], :gy_wrapped.shape[1]] = gy_wrapped
+	framework[:gy_wrapped.shape[0], gy_wrapped.shape[1]:] = gy_wrapped
+	framework[gy_wrapped.shape[0]:, :gy_wrapped.shape[1]] = gy_wrapped
+	framework[gy_wrapped.shape[0]:, gy_wrapped.shape[1]:] = gy_wrapped
+	gy = framework[wx/2-240:wx/2+240, wy/2-320:wy/2+319]
+
+	return gx, gy		
 
 
 
