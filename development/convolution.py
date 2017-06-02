@@ -7,14 +7,23 @@ import wisdom_parse
 from scipy import signal
 
 def pad(arr1, shape):
-	delta = shape-len(arr1)
+	'''delta = shape-len(arr1)
 	w = delta/2
-	return np.concatenate((np.zeros(w), arr1, np.zeros(w)))
+	return np.concatenate((np.zeros(w), arr1, np.zeros(w)))'''
+	bck = np.zeros(shape)
+	dx = abs(arr1.shape[0] - shape[0])/2
+	dy = abs(arr1.shape[1] - shape[1])/2
+	bck[dx:-dx, dy:-dy-1] = arr1
+	return bck.flatten()
 
 def unpad(arr1, shape):
-	delta = abs(shape-len(arr1))
+	'''delta = abs(shape-len(arr1))
 	w = delta/2
-	return arr1[w:-w]
+	return arr1[w:-w]'''
+	arr1 = np.reshape(arr1,(960,1280))
+	dx = abs(arr1.shape[0] - shape[0])/2
+	dy = abs(arr1.shape[1] - shape[1])/2
+	return arr1[dx:-dx, dy:-dy]
 
 def ew_mult(a1, a2):
 	f = np.zeros(a1.shape)
@@ -80,29 +89,62 @@ def convolve(arr1, arr2):
 	return tform3
 
 def convolve(arr1, x_kernel,y_kernel, arr_type):
-	arr1 = arr1.flatten() 
+	#arr1 = arr1.flatten() 
 	#print len(arr1)
-	orig_len = len(arr1)
-	if len(arr1) != len(x_kernel):
-		arr1 = pad(arr1, 2*(len(x_kernel)-1))
-	tform2 = fft_forward(arr1)
+	orig_shp = arr1.shape
+	#if len(arr1) != len(x_kernel):
+		#arr1 = pad(arr1, (960,1280))
+	#tform2 = fft_forward(arr1)
 	#temp = [x[0] for x in tform2]
 	#print x_kernel[0]
 	#print tform2, tform1[0]
-	print len(tform2), len(arr1), len(x_kernel)	
-	gx = x_kernel*tform2
-	gy = y_kernel*tform2
+	#print len(tform2), len(arr1), len(x_kernel)	
+	#gx = x_kernel*tform2
+	#gy = y_kernel*tform2
 	#print to_tform, to_tform.shape
-	gx = fft_backward(gx)
-	gy = fft_backward(gy)
+	#gx = fft_backward(gx)
+	#gy = fft_backward(gy)
 	#print tform3
 	
 	#print len(gx)
-	#gx = signal.convolve(arr1, x_kernel,mode='same')
-	#gy = signal.convolve(arr1, y_kernel,mode='same')
-	gx = unpad(gx, orig_len)
-	gy = unpad(gy, orig_len)
+	gx = signal.fftconvolve(arr1, x_kernel,mode='same')
+	gy = signal.fftconvolve(arr1, y_kernel,mode='same')
+	#gx = unpad(gx, orig_shp)
+	#gy = unpad(gy, orig_shp)
 	#print tform4.shape
 	return gx,gy
+
+def convolve2d(arr, x_kernel, y_kernel):
+	#need to zero pad
+	bck = np.zeros(x_kernel.shape)
+	dx = abs(arr1.shape[0] - x_kernel.shape[0])/2
+	dy = abs(arr1.shape[1] - x_kernel.shape[1])/2
+	bck[dx:-dx, dy:-dy-1] = arr1
+	
+	a = pyfftw.empty_aligned(bck.shape, dtype='float32')
+	transform = pyfftw.builders.fft2(a)
+	'''for x in range(a.shape[0]):
+		for y in range(a.shape[1]):
+			a[x,y] = arr[x,y]'''
+	a[:,:] = bck[:,:]
+	tform1 = transform()
+	
+	gx = x_kernel*tform1
+	gy = y_kernel*tform1
+
+	b = pyfftw.empty_aligned(gx.shape, dtype='complex64')
+	inverse = pyfftw.builders.irfft2(b)
+	
+	b[:,:] = gx[:,:]
+
+	gx = inverse()
+	
+	b[:,:] = gy[:,:]
+	
+	gy = inverse()
+
+	#unpad?
+	return gx[dx:-dx, dy:-dy-1], gy[dx:-dx, dy:-dy-1]		
+
 
 
