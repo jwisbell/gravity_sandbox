@@ -17,8 +17,6 @@ import convolution
 import gdal
 import io_funcs
 
-#convolution.here()
-
 # --------- Constants -----------
 ADB_FILEPATH = ''
 NORMALIZATION = 1.
@@ -26,38 +24,24 @@ REFRESH_RATE = 1 #hz
 SLEEP_TIME = 1 #seconds
 #ITER = 15000 #number of iteration to orbit over
 POTENTIAL_NORM = 5000#7500.
-"""
 INT_SECONDS = 3.5
-ITER = 10000#int(11000 * (INT_SECONDS - 2.2))
 vel_scaling = 1.
 verbose = 0
 SF = 4
-idle_time = 1*60; waiting = time.time()
 debug=1
-"""
 
-parser = OptionParser()
-parser.add_option("-i", "--idle", dest="idle_time", default=60., type='float', help="Set the amount of time (in seconds) until idle mode begins (default 600)")
-parser.add_option("-t", "--timing", dest="INT_SECONDS", type='float', help="Set the number of seconds per iteration you would like (default 3.5)")
-parser.add_option("-s", "--speed", dest="vel_scaling", type='float', help="Set a scaling factor for the input velocities (default 1.0)")
-parser.add_option("-m", "--smoothness", dest="SF", type='int', help="Smoothness factor for gradient calculation. Lower values make particle more sensitive to noise. Default is 4")
-parser.add_option("-d", "--debug", dest="debug", type='int', help="Use a pre-made density field for testing purposes. Disables tablet I/O. 1 for on, 0 for off.")
-#parser.add_option("-v", "--verbose", dest="verbose", type='int',help="If this flag is set to true, save the potential field as a .png image")
-(options, args) = parser.parse_args()
-
-"""
 parser = ArgumentParser()
 parser.add_argument("-i", "--idle", dest="idle_time", default=60., type=float, help="Set the amount of time (in seconds) until idle mode begins (default 600)")
+parser.add_argument("-t", "--timing", dest="INT_SECONDS", default=3.5, type=float, help="Set the number of seconds per iteration you would like (default 3.5)")
+parser.add_argument("-s", "--speed", dest="vel_scaling", type=float, default=1.0, help="Set a scaling factor for the input velocities (default 1.0)")
+parser.add_argument("-m", "--smoothness", dest="SF", type=int, default=4, help="Smoothness factor for gradient calculation. Lower values make particle more sensitive to noise. Default is 4")
+parser.add_argument("-d", "--debug", dest="debug", type=int, default=0, help="Use a pre-made density field for testing purposes. Disables tablet I/O. 1 for on, 0 for off.")
+
 args = parser.parse_args()
 
-""" 
-print IDLE_TIME
-#print vel_scaling
-x = input()
-#if verbose == 1:
-#verbose=True
-#else:
-#verbose=False
+waiting = time.time()
+ITER = 10000#int(11000 * (args.INT_SECONDS - 2.2))
+
 def differ(arr1, arr2):
 	for k in range(len(arr1)):
 		if arr1[k] != arr2[k]:
@@ -69,18 +53,19 @@ if __name__ == '__main__':
 	#------------ START THE SANDBOX ------------
 	previous_pos = [0.,0.]
 	previous_vel = [0.,0.]
-	if debug==0:
+	if args.debug==0:
 		call('bash initialize.sh', shell=True)
 		previous_pos, previous_vel = io_funcs.read_from_app()
 	# ----- INITIAL VALUES AND CONSTANTS -------------
 	PLUMMER = fits.getdata('./aux/PlummerDFT.fits',0)
-	X_KERNEL = np.load('dxDFT.npy')#fits.getdata('./aux/dx_kernel.fits',0)  
-	Y_KERNEL = np.load('dyDFT.npy') #fits.getdata('./aux/dy_kernel.fits',0)
+	X_KERNEL =  np.load('./aux/dxDFT.npy')#fits.getdata('./aux/dx_kernel.fits',0)  ##
+	Y_KERNEL = np.load('./aux/dyDFT.npy') #fits.getdata('./aux/dy_kernel.fits',0) #
 	#temp = [x[0] for x in X_KERNEL]
 	#X_KERNEL = np.copy(temp)
 	#print 'hello'
 	#temp = [x[0] for x in Y_KERNEL]
-	#Y_KERNEL = np.copy(temp)   
+	#Y_KERNEL = np.copy(temp)  
+	print X_KERNEL 
 	current_pos = [180,321] #y, x
 	vel = -np.sqrt(10./abs(240 - current_pos[1]))*2
 	current_vel = [0,vel] # vy, vx
@@ -206,12 +191,11 @@ if __name__ == '__main__':
 			print end-start, 'seconds have elapsed...'
 			#maybe refresh after REFRESH_RATE - (end-start) seconds if positive number?
 			time.sleep(1.5)
-			if time.time() - waiting >= idle_time:
+			if time.time() - waiting >= args.idle_time:
 				idle=True
 			sys.stdout.flush()
 		if debug ==1:
-			print 'here we are'
-			dem_array = np.zeros((480,639))+4
+			dem_array = np.zeros((480,639))
 			dem_array[240,320] = 10
 			#dem_array = np.rot90(dem_array,2)
 		
@@ -221,13 +205,13 @@ if __name__ == '__main__':
 			"""
 			shp = dem_array.shape
 
-
-			gx,gy = convolution.convolve(dem_array, X_KERNEL,Y_KERNEL,'kernel')
-			gx = np.reshape(gx,shp)
-			gy = np.reshape(gy,shp)
+			conv_start = time.time()
+			gx,gy = convolution.convolve2d(dem_array, X_KERNEL,Y_KERNEL)
+			#gx = np.reshape(gx,shp)
+			#gy = np.reshape(gy,shp)
 			gx = np.negative(gx)
 			gy = np.negative(gy)
-			print gx
+			print 'Convolution took ', time.time()-conv_start
 
 			particle = gravity_algorithm2.Particle(current_pos, np.array(current_vel), (gx,gy))
 			

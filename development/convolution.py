@@ -171,8 +171,12 @@ def convolve2d(arr, x_kernel, y_kernel,method='np'):
 		framework[gx_wrapped.shape[0]:, :gx_wrapped.shape[1]] = gx_wrapped
 		framework[gx_wrapped.shape[0]:, gx_wrapped.shape[1]:] = gx_wrapped
 		wx = float(framework.shape[0]); wy = float(framework.shape[1])
-		gx = framework[wx/2-240:wx/2+240, wy/2-320:wy/2+319]
-
+		gx = np.copy(framework[wx/2-240:wx/2+240, wy/2-320:wy/2+319])
+		'''import matplotlib.pyplot as plt
+		fig = plt.figure()
+		plt.imshow(framework, vmin=0.5*np.min(framework), vmax=.5*np.max(framework))
+		plt.show()
+		'''
 		framework[:gy_wrapped.shape[0], :gy_wrapped.shape[1]] = gy_wrapped
 		framework[:gy_wrapped.shape[0], gy_wrapped.shape[1]:] = gy_wrapped
 		framework[gy_wrapped.shape[0]:, :gy_wrapped.shape[1]] = gy_wrapped
