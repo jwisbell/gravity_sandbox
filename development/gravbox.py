@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 from scipy import signal
 
 #------- Import our files ---------
-import gravity_algorithm2
+import gravity_algorithm
 #import DiscretePlummerKernel
 import convolution
 import gdal
@@ -66,7 +66,7 @@ if __name__ == '__main__':
 	#temp = [x[0] for x in Y_KERNEL]
 	#Y_KERNEL = np.copy(temp)  
 	print X_KERNEL 
-	current_pos = [180,321] #y, x
+	current_pos = [180,320] #y, x
 	vel = -np.sqrt(10./abs(240 - current_pos[1]))*2
 	current_vel = [0,vel] # vy, vx
 	exit = 0
@@ -145,9 +145,9 @@ if __name__ == '__main__':
 			get_inpt_s = time.time()
 			input_pos, input_vel = io_funcs.read_from_app(vel_scaling)
 			print input_pos
-			particle = gravity_algorithm2.Particle(current_pos, np.array(current_vel), (gx,gy))
+			particle = gravity_algorithm.Particle(current_pos, np.array(current_vel), (gx,gy))
 			if differ(input_pos, previous_pos) or differ(input_vel, previous_vel):
-				particle = gravity_algorithm2.Particle(input_pos, np.array(input_vel), (gx,gy))
+				particle = gravity_algorithm.Particle(input_pos, np.array(input_vel), (gx,gy))
 				previous_pos = np.copy(input_pos); previous_vel = np.copy(input_vel)
 				waiting = time.time()
 			print 'getting input takes: ', time.time()-get_inpt_s
@@ -155,7 +155,7 @@ if __name__ == '__main__':
 			INTEGRATE FOR A WHILE
 			"""
 			int_time = time.time()
-			to_send = gravity_algorithm2.run_orbit(particle, ITER, loops=loops,step=0.01,edge_mode='reflect',kind='leapfrog') #run for 1000 iterations and save the array
+			to_send = gravity_algorithm.run_orbit(particle, ITER, loops=loops,step=0.01,edge_mode='reflect',kind='leapfrog') #run for 1000 iterations and save the array
 			int_end = time.time()
 			print 'integration took', int_end-int_time		
 			loops += 1
@@ -194,7 +194,7 @@ if __name__ == '__main__':
 			if time.time() - waiting >= args.idle_time:
 				idle=True
 			sys.stdout.flush()
-		if debug ==1:
+		if args.debug ==1:
 			dem_array = np.zeros((480,639))
 			dem_array[240,320] = 10
 			#dem_array = np.rot90(dem_array,2)
@@ -207,19 +207,18 @@ if __name__ == '__main__':
 
 			conv_start = time.time()
 			gx,gy = convolution.convolve2d(dem_array, X_KERNEL,Y_KERNEL)
-			#gx = np.reshape(gx,shp)
-			#gy = np.reshape(gy,shp)
 			gx = np.negative(gx)
 			gy = np.negative(gy)
 			print 'Convolution took ', time.time()-conv_start
 
-			particle = gravity_algorithm2.Particle(current_pos, np.array(current_vel), (gx,gy))
+			particle = gravity_algorithm.Particle(current_pos, np.array(current_vel), (gx,gy))
+
 			
 			"""
 			INTEGRATE FOR A WHILE
 			"""
 
-			to_send = gravity_algorithm2.run_orbit(particle, ITER, loops=loops,step=0.001,edge_mode='reflect',kind='leapfrog') #run for 1000 iterations and save the array
+			to_send = gravity_algorithm.run_orbit(particle, ITER, loops=loops,step=0.001,edge_mode='reflect',kind='leapfrog') #run for 1000 iterations and save the array
 			posx = [val[0] for val in to_send]
 			posy = [val[1] for val in to_send]			
 			fig,ax = plt.subplots(2)
@@ -242,7 +241,29 @@ if __name__ == '__main__':
 			current_pos = [particle.pos[0], particle.pos[1]] 
 			current_vel = [particle.vel[0], particle.vel[1]]
 			print 'CURRENT POSITION AND VELOCITY:', current_pos, current_vel
+		if args.debug ==2:
+			dem_array = np.zeros((480,639))
+			dem_array[240,320] = 10
+			#dem_array = np.rot90(dem_array,2)
+		
+			
+			"""
+			CONVOLVE THE DEM-DENSITY FIELD WITH THE PLUMMER KERNEL
+			"""
+			shp = dem_array.shape
 
+			conv_start = time.time()
+			gx,gy = convolution.convolve2d(dem_array, X_KERNEL,Y_KERNEL)
+			gx = np.negative(gx)
+			gy = np.negative(gy)
+
+			print np.where(gx==np.max(gx)), np.where(np.min(gx)==gx)
+			print np.where(gy == np.max(gy)), np.where(gy==np.min(gy))
+			print 'Convolution took ', time.time()-conv_start
+
+			particle = gravity_algorithm.Particle(current_pos, np.array(current_vel), (gx,gy))
+
+			gravity_algorithm.kepler_check(particle, step=.0005)
 
 		else:
 			call('xdotool mousemove_relative 0 350; ', shell=True) # move the mouse to get it out of screenshot
