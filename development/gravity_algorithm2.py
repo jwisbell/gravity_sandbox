@@ -65,8 +65,23 @@ class Particle():
 	except:
 		new_accel = np.array(self.a())
         new_vel = self.vel + 0.5*(np.array(self.a()) + new_accel)*step
+        #add secondary gradient components????
         self.pos = np.copy(new_pos)
         self.vel = np.copy(new_vel)
+
+    def leapfrog2(self, step=0.01):
+        new_pos = np.array(self.pos) + np.array(vel)*step
+        #add gradient stuff?
+        '''
+        new_pos = [self.pos[0]+ggx[int(self.pos[0]),int(self.pos[1])]*(self.pos[0]-int(self.pos[0])), self.pos[1]+ggy[int(self.pos[0]),int(self.pos[1])]*(self.pos[1]-int(self.pos[1))]
+        '''
+        new_accel = np.array([self.dx[int(new_pos[0]),int(new_pos[1])], self.dy[int(new_pos[0]),int(new_pos[1])]])
+
+        new_vel = self.vel + step * new_accel
+
+        self.pos = np.copy(new_pos)
+        self.vel = np.copy(new_vel)
+
 
     def dynamic_timestep(self, step=0.1):
         p1 = self.rk4(step/2., self.pos)
