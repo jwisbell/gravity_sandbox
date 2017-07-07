@@ -183,9 +183,16 @@ def convolve2d(arr, x_kernel, y_kernel,method='np'):
 		framework[gy_wrapped.shape[0]:, gy_wrapped.shape[1]:] = gy_wrapped
 		gy = framework[wx/2-240:wx/2+240, wy/2-320:wy/2+319]
 
-		ggx, junk = np.gradient(gx)[0]
-		ggy, junk = np.gradient(gy)[1]
+		print np.where(gy == np.max(gy))
+		print np.where(gy == np.min(gy))
 
+		print np.where(gx == np.max(gx))
+		print np.where(gx == np.min(gx))
+
+		#---- d2x and d2y ---
+		g2x = np.gradient(gx)
+		g2y = np.gradient(gy)
+		
 		return gx, gy
 
 	
