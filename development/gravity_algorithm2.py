@@ -18,11 +18,13 @@ import time
 
 
 class Particle():
-    def __init__(self,pos,vel, accel,smoothness=4):
+    def __init__(self,pos,vel, accel,ggx, ggy,smoothness=4):
         #self.pot = potential
         #dx, dy = np.gradient(potential,smoothness)
         self.dx = accel[0]
         self.dy = accel[1]
+        self.ggx = ggx
+        self.ggy = ggy
 	'''rmsx = np.std(self.dx)
 	rmsy = np.std(self.dy)
 	inds = np.where(self.dx > 10*rmsx)
@@ -73,7 +75,7 @@ class Particle():
         new_pos = np.array(self.pos) + np.array(vel)*step
         #add gradient stuff?
         '''
-        new_pos = [self.pos[0]+ggx[int(self.pos[0]),int(self.pos[1])]*(self.pos[0]-int(self.pos[0])), self.pos[1]+ggy[int(self.pos[0]),int(self.pos[1])]*(self.pos[1]-int(self.pos[1))]
+        new_pos = [self.pos[0]+self.ggx[int(self.pos[0]),int(self.pos[1])]*(self.pos[0]-int(self.pos[0])), self.pos[1]+self.ggy[int(self.pos[0]),int(self.pos[1])]*(self.pos[1]-int(self.pos[1))]
         '''
         new_accel = np.array([self.dx[int(new_pos[0]),int(new_pos[1])], self.dy[int(new_pos[0]),int(new_pos[1])]])
 
