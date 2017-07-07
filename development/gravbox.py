@@ -1,6 +1,7 @@
 # ------- Import Basic Functionality ------
 import time
 import sys
+from animate_orbits import makegif
 from subprocess import call
 import numpy as np
 from astropy.io import fits
@@ -26,7 +27,7 @@ SLEEP_TIME = 1 #seconds
 POTENTIAL_NORM = 5000#7500.
 INT_SECONDS = 3.5
 vel_scaling = 1.
-verbose = 0
+#verbose = 0
 SF = 4
 debug=1
 
@@ -36,6 +37,7 @@ parser.add_argument("-t", "--timing", dest="INT_SECONDS", default=3.5, type=floa
 parser.add_argument("-s", "--speed", dest="vel_scaling", type=float, default=1.0, help="Set a scaling factor for the input velocities (default 1.0)")
 parser.add_argument("-m", "--smoothness", dest="SF", type=int, default=4, help="Smoothness factor for gradient calculation. Lower values make particle more sensitive to noise. Default is 4")
 parser.add_argument("-d", "--debug", dest="debug", type=int, default=0, help="Use a pre-made density field for testing purposes. Disables tablet I/O. 1 for on, 0 for off.")
+parser.add_argument("-v", "--verbose", dest="verbose", type=bool, default=False, help="Save a plot displaying the potential field. (default False)")
 
 args = parser.parse_args()
 
@@ -74,7 +76,7 @@ if __name__ == '__main__':
 	idle = False#True
 	#call('/home/gravity/src/SARndbox-2.2/bin/SARndbox -uhm -fpv -rer 20 100 &', shell=True)
 	while exit == 0:
-		if not idle and debug==0:
+		if not idle and args.debug==0:
 			start = time.time()
 			"""
 			REFRESH THE DEM FILE SAVED ON DISK
@@ -85,8 +87,8 @@ if __name__ == '__main__':
 			"""
 			get_dem_start = time.time()
 			call('xdotool mousemove_relative 0 350; ', shell=True) # move the mouse to get it out of screenshot
-			call("xwd -name SARndbox | convert xwd:- '/home/gravity/Desktop/color_field.jpg' ;", shell=True)
-			dem_file = gdal.Open('/home/gravity/Desktop/gravbox/BathymetrySaverTool.dem')#('/home/gravity/src/SARndbox-2.2/BathymetrySaverTool.dem')
+			call("xwd -name SARndbox | convert xwd:- '/home/gravbox/Desktop/color_field.jpg' ;", shell=True)
+			dem_file = gdal.Open('/home/gravbox/Desktop/gravbox/BathymetrySaverTool.dem')#('/home/gravity/src/SARndbox-2.2/BathymetrySaverTool.dem')
 			# Converts dem_file to numpy array of shape (480, 639)
 			dem_array = np.array(dem_file.GetRasterBand(1).ReadAsArray())
 			#dem_array = np.rot90(dem_array,2)
@@ -221,6 +223,7 @@ if __name__ == '__main__':
 			to_send = gravity_algorithm.run_orbit(particle, ITER, loops=loops,step=0.001,edge_mode='reflect',kind='leapfrog') #run for 1000 iterations and save the array
 			posx = [val[0] for val in to_send]
 			posy = [val[1] for val in to_send]			
+			"""
 			fig,ax = plt.subplots(2)
    			ax[0].imshow(gy,vmax=.2, vmin=-.2)
     			ax[0].scatter(posy,posx, c='white',edgecolors='none',s=2)
@@ -233,9 +236,10 @@ if __name__ == '__main__':
     			#plt.show()
     			plt.savefig('./debug/test_orbit%i.png'%(loops))
     			plt.close()
-			
+			"""
+			makegif(posx, posy,gx,gy,loops)
 			loops +=1
-			if loops > 50:
+			if loops > 100:
 				loops=0
 
 			current_pos = [particle.pos[0], particle.pos[1]] 
@@ -274,7 +278,7 @@ if __name__ == '__main__':
 				waiting = time.time()
 				idle=False
 			call('xdotool keyup "b"', shell=True)
-			call("xwd -name SARndbox | convert xwd:- '/home/gravity/Desktop/color_field.jpg' ;", shell=True)
+			call("xwd -name SARndbox | convert xwd:- '/home/gravbox/Desktop/color_field.jpg' ;", shell=True)
 			io_funcs.idle_send()
 			sys.stdout.flush()
 
