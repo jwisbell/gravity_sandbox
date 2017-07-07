@@ -18,11 +18,13 @@ import time
 
 
 class Particle():
-    def __init__(self,pos,vel, accel,smoothness=4):
+    def __init__(self,pos,vel, accel,ggx, ggy,smoothness=4):
         #self.pot = potential
         #dx, dy = np.gradient(potential,smoothness)
         self.dx = accel[0]
         self.dy = accel[1]
+	self.ggx = ggx
+        self.ggy = ggy
 	'''rmsx = np.std(self.dx)
 	rmsy = np.std(self.dy)
 	inds = np.where(self.dx > 10*rmsx)
@@ -69,6 +71,22 @@ class Particle():
         self.pos = np.copy(new_pos)
         self.vel = np.copy(new_vel)
 
+    def leapfrog2(self, step=0.01):
+        new_pos = np.array(self.pos) + np.array(self.vel)*step
+        #add gradient stuff?
+        #print new_pos
+        new_x = new_pos[0]+self.ggx[int(self.pos[0]),int(self.pos[1])] * (self.pos[0]-int(self.pos[0])) * step**2
+        #print self.ggx[int(new_pos[0]),int(new_pos[1])] * (new_pos[0]-int(new_pos[0]))
+        new_y = new_pos[1]+self.ggy[int(self.pos[0]),int(self.pos[1])] * (self.pos[1]-int(self.pos[1])) * step**2
+        new_pos = [new_x,new_y]#[self.pos[0]+np.array(self.ggx[int(self.pos[0]),int(self.pos[1])])*(self.pos[0]-int(self.pos[0])), self.pos[1]+np.array(self.ggy[int(self.pos[0]),int(self.pos[1])])*(self.pos[1]-int(self.pos[1])]
+        #print new_pos
+	#i = input()
+        new_accel = np.array([self.dx[int(new_pos[0]),int(new_pos[1])], self.dy[int(new_pos[0]),int(new_pos[1])]])
+
+        new_vel = self.vel + step * new_accel
+
+        self.pos = np.copy(new_pos)
+        self.vel = np.copy(new_vel)
   
     """Function that updates (x,y,z,vx,vy,vz) by implementing the Runge-Kutta algorithm
         
@@ -113,6 +131,9 @@ class Particle():
         elif kind == 'leapfrog':
             self.prev_pos = np.copy(self.pos)
             self.leapfrog(step)
+        elif kind == 'leapfrog2':
+            self.prev_pos = np.copy(self.pos)
+            self.leapfrog2(step)
     def is_inbounds(self, edge_mode):
         self.edge_mode = edge_mode
         if edge_mode == 'stop':
@@ -159,8 +180,8 @@ class Particle():
                 self.pos[0] = self.MAXX-1
             return True
         
-def kepler_check(test_particle, orbits=5,step=0.001,edge_mode='pacman',kind='leapfrog'):
-	y_pos = np.linspace(250,260,10)
+def kepler_check(test_particle, orbits=3,step=0.001,edge_mode='pacman',kind='leapfrog'):
+	y_pos = np.linspace(300,310,10)
 	x_pos = [320 for x in y_pos]
 	vel = np.linspace(.5,1,5)
 	periods = []; axis = []
@@ -169,13 +190,14 @@ def kepler_check(test_particle, orbits=5,step=0.001,edge_mode='pacman',kind='lea
 		num_orbit = 0
 		test_particle.pos = [y,320]
 		#vel = -np.sqrt(10.*abs(240 - x))
-		test_particle.vel = [0, 0]
+		test_particle.vel = [0, 1]
 		init_pos = np.copy(test_particle.pos)
    		init_vel = np.copy(test_particle.vel)
 		num_iter = 0
 		near = True
 		times = [0]
 		posx = []; posy = []
+		start = time.time()
 		while num_orbit < orbits:
 			if test_particle.is_inbounds(edge_mode):
 	            		test_particle.update(step,kind)
@@ -192,6 +214,7 @@ def kepler_check(test_particle, orbits=5,step=0.001,edge_mode='pacman',kind='lea
         		else:
             			break
 			num_iter += 1
+		print 'orbit took', time.time()-start
 		fig = plt.figure()
     		plt.imshow(test_particle.dx)
     		plt.scatter(posy, posx, c='purple',edgecolors='none',s=2)

@@ -253,7 +253,7 @@ if __name__ == '__main__':
 			shp = dem_array.shape
 
 			conv_start = time.time()
-			gx,gy = convolution.convolve2d(dem_array, X_KERNEL,Y_KERNEL)
+			gx,gy, g2x, g2y = convolution.convolve2d(dem_array, X_KERNEL,Y_KERNEL)
 			gx = np.negative(gx)
 			gy = np.negative(gy)
 
@@ -261,9 +261,9 @@ if __name__ == '__main__':
 			print np.where(gy == np.max(gy)), np.where(gy==np.min(gy))
 			print 'Convolution took ', time.time()-conv_start
 
-			particle = gravity_algorithm.Particle(current_pos, np.array(current_vel), (gx,gy))
+			particle = gravity_algorithm.Particle(current_pos, np.array(current_vel), (gx,gy),g2x,g2y)
 
-			gravity_algorithm.kepler_check(particle, step=.0005)
+			gravity_algorithm.kepler_check(particle, step=.005,kind='leapfrog2')
 
 		else:
 			call('xdotool mousemove_relative 0 350; ', shell=True) # move the mouse to get it out of screenshot
