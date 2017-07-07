@@ -1,4 +1,4 @@
-/home/gravity/src/SARndbox-2.2/bin/SARndbox -uhm -fpv &
+/home/gravbox/src/SARndbox-2.3/bin/SARndbox -uhm -fpv &
 
 sleep 1.0;
 wmctrl -R SARndbox;
