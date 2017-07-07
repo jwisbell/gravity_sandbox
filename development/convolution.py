@@ -190,8 +190,8 @@ def convolve2d(arr, x_kernel, y_kernel,method='np'):
 		print np.where(gx == np.min(gx))
 
 		#---- d2x and d2y ---
-		g2x = np.gradient(gx)
-		g2y = np.gradient(gy)
+		g2x, junk = np.gradient(gx)
+		g2y, junk = np.gradient(gy)
 		
 		return gx, gy
 
