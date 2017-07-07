@@ -159,7 +159,7 @@ class Particle():
                 self.pos[0] = self.MAXX-1
             return True
         
-def kepler_check(test_particle, orbits=3,step=0.001,edge_mode='pacman',kind='leapfrog'):
+def kepler_check(test_particle, orbits=5,step=0.001,edge_mode='pacman',kind='leapfrog'):
 	y_pos = np.linspace(250,260,10)
 	x_pos = [320 for x in y_pos]
 	vel = np.linspace(.5,1,5)
