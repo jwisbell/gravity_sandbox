@@ -10,6 +10,7 @@ from multiprocessing import Process
 from optparse import OptionParser
 from argparse import ArgumentParser
 from scipy import signal
+from PyQt4 import QtGui as QtWidgets
 
 #------- Import our files ---------
 import gravity_algorithm
@@ -17,6 +18,7 @@ import gravity_algorithm
 import convolution
 import gdal
 import io_funcs
+import active_animating
 
 # --------- Constants -----------
 ADB_FILEPATH = ''
@@ -29,7 +31,7 @@ INT_SECONDS = 3.5
 vel_scaling = 1.
 #verbose = 0
 SF = 4
-debug=1
+SCALE_FACTOR = 16 # for DEM smoothing
 
 parser = ArgumentParser()
 parser.add_argument("-i", "--idle", dest="idle_time", default=60., type=float, help="Set the amount of time (in seconds) until idle mode begins (default 600)")
@@ -55,6 +57,14 @@ if __name__ == '__main__':
 	#------------ START THE SANDBOX ------------
 	previous_pos = [0.,0.]
 	previous_vel = [0.,0.]
+
+	dem_file = gdal.Open('/home/gravbox/Desktop/current.dem')
+	# Convert dem_file to numpy array of shape (480, 639)
+	dem_array = np.array(dem_file.GetRasterBand(1).ReadAsArray())/40/4
+
+	# Initialize figure for animation
+	figure = active_animating.Animate(dem_array)
+
 	if args.debug==0:
 		call('bash initialize.sh', shell=True)
 		previous_pos, previous_vel = io_funcs.read_from_app()
@@ -62,19 +72,18 @@ if __name__ == '__main__':
 	PLUMMER = fits.getdata('./aux/PlummerDFT.fits',0)
 	X_KERNEL =  np.load('./aux/dxDFT.npy')#fits.getdata('./aux/dx_kernel.fits',0)  ##
 	Y_KERNEL = np.load('./aux/dyDFT.npy') #fits.getdata('./aux/dy_kernel.fits',0) #
-	#temp = [x[0] for x in X_KERNEL]
-	#X_KERNEL = np.copy(temp)
-	#print 'hello'
-	#temp = [x[0] for x in Y_KERNEL]
-	#Y_KERNEL = np.copy(temp)  
-	print X_KERNEL 
-	current_pos = [180,320] #y, x
+	
+	current_pos = [100,500] #y, x
 	vel = -np.sqrt(10./abs(240 - current_pos[1]))*2
-	current_vel = [0,vel] # vy, vx
+	current_vel = [0.,-5.] # vy, vx
 	exit = 0
 	loops = 0
 	idle = False#True
+	first = False
+	if args.debug > 0:
+		first = True
 	#call('/home/gravity/src/SARndbox-2.2/bin/SARndbox -uhm -fpv -rer 20 100 &', shell=True)
+	
 	while exit == 0:
 		if not idle and args.debug==0:
 			start = time.time()
@@ -196,48 +205,51 @@ if __name__ == '__main__':
 			if time.time() - waiting >= args.idle_time:
 				idle=True
 			sys.stdout.flush()
-		if args.debug ==1:
-			dem_array = np.zeros((480,639))
-			dem_array[240,320] = 10
-			#dem_array = np.rot90(dem_array,2)
-		
+		elif args.debug ==1:
+			dem_file = gdal.Open('/home/gravbox/Desktop/current.dem')
+			# Converts dem_file to numpy array of shape (480, 639)
+			scaled_dem_array = np.array(dem_file.GetRasterBand(1).ReadAsArray())/40/SCALE_FACTOR
+			#plt.imshow(dem_array*SCALE_FACTOR/2, vmax=.1, vmin=-.1)
+			#img.set_data(dem_array*SCALE_FACTOR/2)
+			
+			EDGE = 3
+			scaled_dem_array[:EDGE,:] = 0
+			scaled_dem_array[-7:,:] = 0
+			scaled_dem_array[:,:EDGE] = 0
+			scaled_dem_array[:,-14:] = 0
+			
+			print
+			print np.min(scaled_dem_array), np.max(scaled_dem_array)
+			print
 			
 			"""
 			CONVOLVE THE DEM-DENSITY FIELD WITH THE PLUMMER KERNEL
 			"""
-			shp = dem_array.shape
+			shp = scaled_dem_array.shape
 
 			conv_start = time.time()
-			gx,gy = convolution.convolve2d(dem_array, X_KERNEL,Y_KERNEL)
+			gx,gy, g2x, g2y = convolution.convolve2d(scaled_dem_array, X_KERNEL,Y_KERNEL)
 			gx = np.negative(gx)
 			gy = np.negative(gy)
+
 			print 'Convolution took ', time.time()-conv_start
 
-			particle = gravity_algorithm.Particle(current_pos, np.array(current_vel), (gx,gy))
+			particle = gravity_algorithm.Particle(current_pos, np.array(current_vel), (gx,gy),g2x,g2y,new=first)
+			first = False
 
 			
 			"""
 			INTEGRATE FOR A WHILE
 			"""
 
-			to_send = gravity_algorithm.run_orbit(particle, ITER, loops=loops,step=0.001,edge_mode='reflect',kind='leapfrog') #run for 1000 iterations and save the array
+			to_send = gravity_algorithm.run_orbit(particle, 1000, loops=loops,step=0.005,edge_mode='reflect',kind='leapfrog2') #run for 1000 iterations and save the array
 			posx = [val[0] for val in to_send]
-			posy = [val[1] for val in to_send]			
-			"""
-			fig,ax = plt.subplots(2)
-   			ax[0].imshow(gy,vmax=.2, vmin=-.2)
-    			ax[0].scatter(posy,posx, c='white',edgecolors='none',s=2)
-			ax[1].imshow(gx,vmax=.2, vmin=-.2)
-    			ax[1].scatter(posy,posx, c='white',edgecolors='none',s=2)
-    			#plt.arrow(init_pos[1], init_pos[0], init_pos[1]+step*init_vel[1], init_pos[0]+step*init_vel[0], head_width=0.05, head_length=0.1, fc='k', ec='k')
-    			plt.title(r'Test Orbit using $\Delta t = %.3f$'%(.01))
-    			plt.xlim([0,640])
-    			plt.ylim([0,480])
-    			#plt.show()
-    			plt.savefig('./debug/test_orbit%i.png'%(loops))
-    			plt.close()
-			"""
-			makegif(posx, posy,gx,gy,loops)
+			posy = [val[1] for val in to_send]	
+			figure.update_fig(scaled_dem_array, posy, posx, SCALE_FACTOR)
+
+			####call("sleep 5.0",shell=True)
+
+			#makegif(posy, posx,dem_array*SCALE_FACTOR/2,loops)
 			loops +=1
 			if loops > 100:
 				loops=0
@@ -245,7 +257,7 @@ if __name__ == '__main__':
 			current_pos = [particle.pos[0], particle.pos[1]] 
 			current_vel = [particle.vel[0], particle.vel[1]]
 			print 'CURRENT POSITION AND VELOCITY:', current_pos, current_vel
-		if args.debug ==2:
+		elif args.debug ==2:
 			dem_array = np.zeros((480,639))
 			dem_array[240,320] = 10
 			#dem_array = np.rot90(dem_array,2)
@@ -265,7 +277,8 @@ if __name__ == '__main__':
 			print np.where(gy == np.max(gy)), np.where(gy==np.min(gy))
 			print 'Convolution took ', time.time()-conv_start
 
-			particle = gravity_algorithm.Particle(current_pos, np.array(current_vel), (gx,gy),g2x,g2y)
+			particle = gravity_algorithm.Particle(current_pos, np.array(current_vel), (gx,gy),g2x,g2y,new=first)
+			first = False
 
 			gravity_algorithm.kepler_check(particle, step=.005,kind='leapfrog2')
 

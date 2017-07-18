@@ -18,7 +18,7 @@ import time
 
 
 class Particle():
-    def __init__(self,pos,vel, accel,ggx, ggy,smoothness=4):
+    def __init__(self,pos,vel, accel,ggx, ggy,new,smoothness=4):
         #self.pot = potential
         #dx, dy = np.gradient(potential,smoothness)
         self.dx = accel[0]
@@ -43,6 +43,8 @@ class Particle():
         self.prev_pos = np.copy(pos)
         self.vel = vel
         self.acc = [self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]]
+	if new:
+		self.vel = self.vel+ .5 * .005*np.array(self.acc)
     def update_accel(self,pos):
         self.acc = [self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]]
     def a(self):
@@ -75,18 +77,22 @@ class Particle():
         new_pos = np.array(self.pos) + np.array(self.vel)*step
         #add gradient stuff?
         #print new_pos
-        new_x = new_pos[0]+self.ggx[int(self.pos[0]),int(self.pos[1])] * (self.pos[0]-int(self.pos[0])) * step**2
+        new_x = self.ggx[int(self.pos[0]),int(self.pos[1])] * (self.pos[0]-int(self.pos[0])) 
         #print self.ggx[int(new_pos[0]),int(new_pos[1])] * (new_pos[0]-int(new_pos[0]))
-        new_y = new_pos[1]+self.ggy[int(self.pos[0]),int(self.pos[1])] * (self.pos[1]-int(self.pos[1])) * step**2
-        new_pos = [new_x,new_y]#[self.pos[0]+np.array(self.ggx[int(self.pos[0]),int(self.pos[1])])*(self.pos[0]-int(self.pos[0])), self.pos[1]+np.array(self.ggy[int(self.pos[0]),int(self.pos[1])])*(self.pos[1]-int(self.pos[1])]
+        new_y = self.ggy[int(self.pos[0]),int(self.pos[1])] * (self.pos[1]-int(self.pos[1])) 
+        #new_pos = [new_x,new_y]#[self.pos[0]+np.array(self.ggx[int(self.pos[0]),int(self.pos[1])])*(self.pos[0]-int(self.pos[0])), self.pos[1]+np.array(self.ggy[int(self.pos[0]),int(self.pos[1])])*(self.pos[1]-int(self.pos[1])]
         #print new_pos
 	#i = input()
-        new_accel = np.array([self.dx[int(new_pos[0]),int(new_pos[1])], self.dy[int(new_pos[0]),int(new_pos[1])]])
+	try:
+        	new_accel = np.array([self.dx[int(new_pos[0]),int(new_pos[1])], self.dy[int(new_pos[0]),int(new_pos[1])]])
+	except:
+		new_accel = np.array([self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]])
 
-        new_vel = self.vel + step * new_accel
+        new_vel = self.vel + step * new_accel + np.array([new_x,new_y]) * step
 
         self.pos = np.copy(new_pos)
         self.vel = np.copy(new_vel)
+	return new_pos
   
     """Function that updates (x,y,z,vx,vy,vz) by implementing the Runge-Kutta algorithm
         
@@ -132,8 +138,13 @@ class Particle():
             self.prev_pos = np.copy(self.pos)
             self.leapfrog(step)
         elif kind == 'leapfrog2':
-            self.prev_pos = np.copy(self.pos)
-            self.leapfrog2(step)
+		p1=(0,0)
+		if self.is_inbounds(self.edge_mode):
+            		self.prev_pos = np.copy(self.pos)
+            		p1=self.leapfrog2(step)
+		else:
+                	self.pos[i] = [x for x in p1]
+           	self.prev_pos = np.copy(self.pos)
     def is_inbounds(self, edge_mode):
         self.edge_mode = edge_mode
         if edge_mode == 'stop':
