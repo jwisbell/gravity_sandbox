@@ -19,6 +19,7 @@ import convolution
 import gdal
 import io_funcs
 import active_animating
+import topogra as topo
 
 # --------- Constants -----------
 ADB_FILEPATH = ''
@@ -57,6 +58,9 @@ if __name__ == '__main__':
 	#------------ START THE SANDBOX ------------
 	previous_pos = [0.,0.]
 	previous_vel = [0.,0.]
+	#------ Initial Sandbox Calibration -------
+	#baseplane = topo.generate_baseplane('flat.npy')
+
 
 	dem_file = gdal.Open('/home/gravbox/Desktop/current.dem')
 	# Convert dem_file to numpy array of shape (480, 639)
@@ -209,6 +213,7 @@ if __name__ == '__main__':
 			dem_file = gdal.Open('/home/gravbox/Desktop/current.dem')
 			# Converts dem_file to numpy array of shape (480, 639)
 			scaled_dem_array = np.array(dem_file.GetRasterBand(1).ReadAsArray())/40/SCALE_FACTOR
+			#scaled_dem_array = topo.update_surface(baseplane)
 			#plt.imshow(dem_array*SCALE_FACTOR/2, vmax=.1, vmin=-.1)
 			#img.set_data(dem_array*SCALE_FACTOR/2)
 			
