@@ -3,9 +3,10 @@ import numpy as np
 import scipy.linalg
 import functools
 import scipy.optimize
+#import matplotlib.pyplot as plt
 
 
-PLANE_PARAMS = [0.01,-0.001, 730.]#[0.006452, -0.032609, 712.261579]
+PLANE_PARAMS = [0.01,-0.001, 720.]#[0.006452, -0.032609, 712.261579]
 SCALE_FACTOR = 1./50
 
 
@@ -61,10 +62,11 @@ def init_calib(fname=None, data=None):
 
 def calibrate(surface, baseplane):
     """Do calibration here - scaling, setting zero point, removing dead pixels, and trimming edges(?)."""
-    BAD_PIX = np.where(surface==2047)
+    
     surface = surface.astype('float32')
     #need to remove planar slope
-    surface -= baseplane
+    surface = surface[40:-30, 30:-30] - baseplane
+    BAD_PIX = np.where(surface>=200)
     #scale
     surface = np.power(surface,1.)
     surface *= 1.#SCALE_FACTOR
@@ -73,7 +75,7 @@ def calibrate(surface, baseplane):
 
     return surface, BAD_PIX
 
-def generate_baseplane(shape=(640,480)):
+def generate_baseplane(shape=(580,410)):
     """Run on startup to get quick baseplane for calibration using PLANE_PARAMS"""
     X,Y = np.meshgrid(np.arange(0,shape[0]), np.arange(0,shape[1]))
     XX = X.flatten()
@@ -82,17 +84,20 @@ def generate_baseplane(shape=(640,480)):
     return Z
 
 
-def update_surface(baseplane,prev=None,FLOOR=-40):
+def update_surface(baseplane,prev=None,FLOOR=-20,verbose=False):
     """Read updated topography and calibrate for use"""
     (depth,_)= get_depth()
     topo,pix = calibrate(depth,baseplane)
+    if verbose:
+        print 'SURFACE STATS'
+        print np.mean(topo), np.max(topo),np.min(topo), np.median(topo)
     #if there are enough pixels above a threshold, ignore and show previous topo
     #this is useful when hands are in the sandbox
-    if len(np.where(topo<FLOOR)[0]) + len(np.where(topo<FLOOR)[1]) > 20:
+    if len(np.where(topo<FLOOR)[0]) + len(np.where(topo<FLOOR)[1]) > 10:
         if prev == None:
-            return prev #- np.nanmedian(topo)
+            return topo #- np.nanmedian(topo)
         else:
-            return topo
+            return prev
     return topo #- np.nanmedian(topo)
 
 

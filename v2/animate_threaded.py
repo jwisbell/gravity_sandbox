@@ -5,7 +5,7 @@ from pyqtgraph.Qt import QtCore, QtGui
 import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.exporters
-import subprocess
+from subprocess import call
 from skimage import measure
 import gravity_algorithm
 import convolution
@@ -16,13 +16,14 @@ from argparse import ArgumentParser
 start = time.time()
 end = time.time()
 scaling = 16
-YWIDTH = 600.#480.
-XWIDTH = 422.#600#640.
-y0 = 10#/2.
-x0 = 40#2.
-XWINDOW = 640.*2/2
-YWINDOW = 512.*2/2
-xscale = 600.*2.05/2; yscale = 495.*2.05/2
+YWIDTH = 580.#480.
+XWIDTH = 410.#600#640.
+y0 = 1.#-10#/2.
+x0 = 1#15#2.
+XWINDOW = 640.*2   
+YWINDOW = 512.*2 
+#xscale = 600.*2.055 ; yscale = 495.*2.045
+xscale = 600.*2.008 ; yscale = 495.*2.003
 
 # ----- INITIAL VALUES AND CONSTANTS -------------
 X_KERNEL =  np.load('./aux/dx_dft.npy')#fits.getdata('./aux/dx_kernel.fits',0)  ##
@@ -40,6 +41,7 @@ def load_data():
             y_scaled = 600- (y * XWIDTH) - 12
             x = x_scaled ; y = y_scaled
             bg = np.load('display_dem.npy') / scaling
+            #bg = np.zeros(bg.shape)
             bg[0,0] = -40
             bg[0,1] = 1
             #subprocess.call('rm algorithm_output.npy',shell=True)
@@ -63,9 +65,9 @@ class GravityThread(QtCore.QThread):
         self.previous_vel = np.copy(self.current_vel)
         self.in_pos = np.copy(self.previous_pos)
         self.in_vel = np.copy(self.previous_vel)
-        #self.baseplane = topo.generate_baseplane()
-        self.prev_dem = np.load('display_dem.npy')
-        #self.prev_dem = topo.update_surface(self.baseplane, None)
+        self.baseplane = topo.generate_baseplane()
+        #self.prev_dem = np.load('display_dem.npy')
+        self.prev_dem = topo.update_surface(self.baseplane, None)
         self.idle = True
     def __del__(self):
         self.wait()
@@ -86,8 +88,8 @@ class GravityThread(QtCore.QThread):
             if not self.idle:
                 # Load in surface
                 start_loop = time.time()
-                scaled_dem_array = np.load('display_dem.npy')#
-                #scaled_dem_array = topo.update_surface(self.baseplane, self.prev_dem) 
+                #scaled_dem_array = np.load('display_dem.npy')
+                scaled_dem_array = topo.update_surface(self.baseplane, self.prev_dem, verbose=True) 
                 self.prev_dem = scaled_dem_array
                 #scaled_dem_array = scaled_dem_array[40:-30, 30:-30] 
                 xw = scaled_dem_array.shape[1]; yw = scaled_dem_array.shape[0]
@@ -112,7 +114,7 @@ class GravityThread(QtCore.QThread):
                 
                 """INTEGRATE FOR A WHILE"""
                 calc_start = time.time()
-                to_send = gravity_algorithm.run_orbit(particle, 2000, loops=0,step=0.001,edge_mode='reflect',kind='leapfrog2') #run for 1000 iterations and save the array
+                to_send = gravity_algorithm.run_orbit(particle, 3000, loops=0,step=0.001,edge_mode='reflect',kind='leapfrog2') #run for 1000 iterations and save the array
                 posx = [val[0] for val in to_send]
                 posy = [val[1] for val in to_send]
                 print 'Calculation took ', time.time()-calc_start
@@ -122,16 +124,18 @@ class GravityThread(QtCore.QThread):
                 if not self.differ(input_pos, self.previous_pos) and not self.differ(input_vel, self.previous_vel):
                     x = np.asarray(posx)/scaled_dem_array.shape[1]
                     y = np.asarray(posy)/scaled_dem_array.shape[0]
-                    x = x[::10]
-                    y = y[::10]
+                    x = x[::15]
+                    y = y[::15]
                 #print 'has it even gotten here?', x
                 #sys.exit() 
                 self.emit(QtCore.SIGNAL('stage_data'),[x, y, np.nan_to_num(scaled_dem_array)+2,self.idle])
 
                 self.current_pos = [particle.pos[0], particle.pos[1]] 
                 self.current_vel = [particle.vel[0], particle.vel[1]]
-                print self.current_pos
-                time.sleep(1.32 - (time.time() - start_loop))
+                
+
+
+                time.sleep(1.48 - (time.time() - start_loop))
                 dt = time.time()-start_loop
                 print 'LOOP TOOK: ', dt
                 if time.time() - last_idle >= args.idle_time:
@@ -142,20 +146,23 @@ class GravityThread(QtCore.QThread):
                     self.idle = False
                     last_idle = time.time()
                     continue
-                #scaled_dem_array = topo.update_surface(self.baseplane, self.prev_dem)
+                scaled_dem_array = topo.update_surface(self.baseplane, self.prev_dem,verbose=True)
                 #scaled_dem_array = scaled_dem_array[40:-30, 30:-30] 
-                scaled_dem_array = np.load('display_dem.npy') 
+                #scaled_dem_array = np.load('display_dem.npy') 
                 self.prev_dem = scaled_dem_array
                 x = np.zeros(200)
                 y = np.zeros(200)
+                #np.save('../circles.npy',scaled_dem_array)
                 #x,y = self.loading_circle()
+                #bck = np.zeros((410,610))
+                #bck[:,30:] = scaled_dem_array
                 self.emit(QtCore.SIGNAL('stage_data'),[x/scaled_dem_array.shape[1], y/scaled_dem_array.shape[0], np.nan_to_num(scaled_dem_array)+2, self.idle])
                 #add an idle message! or plot a loading circle...?
                 time.sleep(1)
 
     def read_input(self,inputs, vel_scaling=1,x_factor=580, y_factor=410):
         x_i, y_i, x_f, y_f = inputs
-        pos = np.array([y_i * y_factor, x_i * x_factor])    
+        pos = np.array([y_i * y_factor +10, x_i * x_factor-10])    
         d_x = (x_f - x_i)*x_factor
         d_y = (y_f - y_i)*y_factor
         ang = np.arctan2(d_y,d_x)
@@ -185,44 +192,46 @@ class ContourThread(QtCore.QThread):
         j = 0
         first = True
         self.cont_plots = []
-        while True:
-            scaled_dem_array = self.new_bg
-            contours = []
-            if first:
-                #contour1 = measure.find_contours(scaled_dem_array,np.median(scaled_dem_array))
-                contour2 = measure.find_contours(scaled_dem_array,.5*np.median(scaled_dem_array))
-                contour3 = measure.find_contours(scaled_dem_array,2.5*np.median(scaled_dem_array))
-                contour4 = measure.find_contours(scaled_dem_array,-1*np.median(scaled_dem_array))
-                contours = [contour4,contour2,contour3]
-            else:
-                if j == 0:
-                    contours[j] = measure.find_contours(scaled_dem_array,-1*np.median(scaled_dem_array))
-                elif j==1:
-                    contours[j] = measure.find_contours(scaled_dem_array,.5*np.median(scaled_dem_array))
-                elif j==2:
-                    contours[j] = measure.find_contours(scaled_dem_array,2.5*np.median(scaled_dem_array))
-                #elif j==3:
-                #    contours[j] = 
-            #contours = np.load('contours.npy')
-            colors = [(0,0,0,200),(128,128,128,200),(192,192,192,200)]#(102,102,153,200), (64,64,64,200),
-            if first:
-                first = False
-                for i in range(len(contours)):
-                    c = contours[i]
-                    for n, contour in enumerate(c):
-                        spi = pg.PlotDataItem(595-contour[::5,1]-12, contour[::5,0],pen={'color':colors[i],'width':3})
-                        self.cont_plots.append(spi)
-            else:
-                c = contours[j]
+        #while True:
+        scaled_dem_array = self.new_bg
+        contours = [[],[],[]]
+        if first:
+            #contour1 = measure.find_contours(scaled_dem_array,np.median(scaled_dem_array))
+            contour2 = measure.find_contours(scaled_dem_array,.5*np.median(scaled_dem_array))
+            contour3 = measure.find_contours(scaled_dem_array,2.5*np.median(scaled_dem_array))
+            contour4 = measure.find_contours(scaled_dem_array,-1*np.median(scaled_dem_array))
+            contours = [contour4,contour2,contour3]
+        else:
+            if j == 0:
+                contours[j] = measure.find_contours(scaled_dem_array,-1*np.median(scaled_dem_array))
+            elif j==1:
+                contours[j] = measure.find_contours(scaled_dem_array,.5*np.median(scaled_dem_array))
+            elif j==2:
+                contours[j] = measure.find_contours(scaled_dem_array,2.5*np.median(scaled_dem_array))
+            #elif j==3:
+            #    contours[j] = 
+        #self.emit(QtCore.SIGNAL('add_contours'), [j,contours])
+        #contours = np.load('contours.npy')
+        colors = [(0,0,0,200),(128,128,128,200),(192,192,192,200)]#(102,102,153,200), (64,64,64,200),
+        if first:
+            first = False
+            for i in range(len(contours)):
+                c = contours[i]
                 for n, contour in enumerate(c):
                     spi = pg.PlotDataItem(595-contour[::5,1]-12, contour[::5,0],pen={'color':colors[i],'width':3})
-                    self.cont_plots[j] = spi #self.cont_plots.append(spi)
-            self.emit(QtCore.SIGNAL('add_contours'), self.cont_plots)
-            j += 1
-            if j >= len(contours):
-                j = 0
-                #self.sleep(1)
-            self.msleep(50)
+                    self.cont_plots.append(spi)
+        else:
+            c = contours[j]
+            for n, contour in enumerate(c):
+                spi = pg.PlotDataItem(595-contour[::5,1]-12, contour[::5,0],pen={'color':colors[i],'width':3})
+                self.cont_plots[j] = spi #self.cont_plots.append(spi)
+        self.emit(QtCore.SIGNAL('add_contours'), self.cont_plots)
+        j += 1
+        if j >= len(contours):
+            j = 0
+            #self.sleep(1)
+        self.msleep(50)
+
     def update_bg(self, bg):
         self.new_bg = bg
 
@@ -243,20 +252,20 @@ class Display(QtGui.QWidget):
         
         self.view = self.canvas.addViewBox()
         self.view.setAspectLocked(False)
-        self.view.setRange(xRange=[0,600],yRange=[0,422],padding=-1)
+        self.view.setRange(xRange=[0,580],yRange=[0,410],padding=-1)
         self.view.setMouseEnabled(x=False,y=False)
 
         """
         Adjust margins to better align the Kinect data with the projected image.
         Order is left, top, right, bottom. 
         """ 
-        self.leftmargin = -60 ; self.topmargin = 0; self.rightmargin =70; self.bottommargin = -10
+        self.leftmargin = -20 ; self.topmargin = -10; self.rightmargin =60; self.bottommargin = 20
         self.setContentsMargins(self.leftmargin, self.topmargin, self.rightmargin, self.bottommargin)
 
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.FramelessWindowHint)
         self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
         
-        self.setGeometry(640,30, XWINDOW, YWINDOW) # JUST IN CASE, CTRL-ALT-ESC    
+        self.setGeometry(1280,0, XWINDOW, YWINDOW) # JUST IN CASE, CTRL-ALT-ESC    
         self.canvas.nextRow()
 
         #r = cmap_viridis
@@ -274,23 +283,37 @@ class Display(QtGui.QWidget):
         
         #### Set Data  #####################
         self.start = time.time()
-        self.y = x#[0:20]
-        self.x = y#[0:20]
+        self.y = []#[0:20]
+        self.x = []#[0:20]
         self.newx = np.copy(self.x)
         self.newy = np.copy(self.y)
         self.j = 0
         #  image plot
-        self.data = np.rot90(bg)
+        self.data = np.rot90(bg)#np.zeros((580,410)))
         self.newbg = np.copy(self.data)
         self.img = pg.ImageItem(border=None)
         self.img.setZValue(-100)
         self.img.setLookupTable(lut)
         self.img.setImage(self.data)
         self.current_conts = []
-        self.pdi = pg.PlotDataItem([], [], pen={'color':'w','width':3})
-        #self.ti = pg.TextItem("Click to draw a vector",color='r')
+        self.pdi_list = []
+        n_colors = 5
+        grad = np.linspace(32,255,n_colors)
+        for x in grad:
+            self.pdi_list.append(pg.PlotDataItem([], [], pen={'color':(255,255,255,x),'width':3}))
+        '''self.pdi1 = pg.PlotDataItem([], [], pen={'color':(255,255,255,32),'width':3})
+        self.pdi2 = pg.PlotDataItem([], [], pen={'color':(255,255,255,64),'width':3})
+        self.pdi3 = pg.PlotDataItem([], [], pen={'color':(255,255,255,128),'width':3})
+        self.pdi4 = pg.PlotDataItem([], [], pen={'color':(255,255,255,200),'width':3})
+        self.pdi5 = pg.PlotDataItem([], [], pen={'color':(255,255,255,255),'width':3})'''
         self.view.addItem(self.img)
-        self.view.addItem(self.pdi)
+        for v in self.pdi_list:
+            self.view.addItem(v)
+        '''self.view.addItem(self.pdi1)
+        self.view.addItem(self.pdi2)
+        self.view.addItem(self.pdi3)
+        self.view.addItem(self.pdi4)
+        self.view.addItem(self.pdi5)'''
 
         #make the contours
         if args.cont_on == 1:
@@ -309,8 +332,26 @@ class Display(QtGui.QWidget):
             #self.connect(mk_contours_thread.terminate)
             self.close()
 
-    def _update_pos(self, x,y):
-        self.pdi.setData(x,y)
+    def _update_pos(self, x,y, color='w'):
+        self.x = x; self.y = y
+        num_vals = 50 / len(self.pdi_list)
+        self.pdi_list[0].setPen(color=(255,255,255,32),width=3)
+        for i in range(len(self.pdi_list)):
+            v = self.pdi_list[i]
+            v.setData(x[i*num_vals:(i+1)*num_vals], y[i*num_vals:(i+1)*num_vals])
+        if color=='r':
+            v = self.pdi_list[0]
+            v.setPen(color='r',width=3)
+            for i in range(len(self.pdi_list)):
+                v = self.pdi_list[i]
+                v.setData(x[i*num_vals:(i+1)*num_vals], y[i*num_vals:(i+1)*num_vals])
+
+
+        '''self.pdi1.setData(x[:10],y[:10])
+        self.pdi2.setData(x[10:20],y[10:20])
+        self.pdi3.setData(x[20:30],y[20:30])
+        self.pdi4.setData(x[30:40],y[30:40])
+        self.pdi5.setData(x[40:],y[40:])'''
 
     def _update_bg(self, bg):
         bg[0,0] = -40
@@ -341,8 +382,8 @@ class Display(QtGui.QWidget):
             new_conts.append(c)
             self.view.addItem(c)
         self.current_conts = np.copy(new_conts)
-        self.view.removeItem(self.pdi)
-        self.view.addItem(self.pdi)
+        #self.view.removeItem(self.pdi)
+        #self.view.addItem(self.pdi)
         #self.second_display._update_contours(cont_list)
 
 
@@ -364,9 +405,9 @@ class App(QtGui.QMainWindow):
         self.mainbox.layout().addWidget(self.canvas)
         self.pressed=False; self.moved=False		
         
-        self.view = self.canvas.addViewBox()
+        '''self.view = self.canvas.addViewBox()
         self.view.setAspectLocked(False)
-        self.view.setRange(xRange=[0,600],yRange=[0,422],padding=-1)
+        self.view.setRange(xRange=[0,580],yRange=[0,410],padding=-1)
         self.view.setMouseEnabled(x=False,y=False)
 
         """
@@ -374,7 +415,21 @@ class App(QtGui.QMainWindow):
         Order is left, top, right, bottom. 
         """ 
         self.leftmargin = -60 ; self.topmargin = 0; self.rightmargin =70; self.bottommargin = -10
-        self.mainbox.setContentsMargins(self.leftmargin, self.topmargin, self.rightmargin, self.bottommargin)
+        self.mainbox.setContentsMargins(self.leftmargin, self.topmargin, self.rightmargin, self.bottommargin)'''
+
+
+        self.view = self.canvas.addViewBox()
+        self.view.setAspectLocked(False)
+        self.view.setRange(xRange=[0,580],yRange=[0,410],padding=-1)
+        self.view.setMouseEnabled(x=False,y=False)
+
+        """
+        Adjust margins to better align the Kinect data with the projected image.
+        Order is left, top, right, bottom. 
+        """ 
+        self.leftmargin = -20 ; self.topmargin = -10; self.rightmargin =60; self.bottommargin = 20
+        self.setContentsMargins(self.leftmargin, self.topmargin, self.rightmargin, self.bottommargin)
+
 
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.FramelessWindowHint)
         self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
@@ -389,10 +444,10 @@ class App(QtGui.QMainWindow):
 
         #r = cmap_viridis
         r = cmap_jet
-        pos = np.linspace(1.00,-.3,len(r)-1)
+        pos = np.linspace(1.00,.05,len(r)-1)
         pos= np.append(pos, np.array([np.nan]))
         cmap = pg.ColorMap(pos, r)
-        lut = cmap.getLookupTable(.5,1.0,256)#(-.009,1.05, 256)
+        lut = cmap.getLookupTable(-1,1.,256)#(-.009,1.05, 256)
         if args.cmap_name == 'viridis':
             r = cmap_viridis
             pos = np.linspace(1,-.25,len(r)-1)
@@ -403,13 +458,13 @@ class App(QtGui.QMainWindow):
         
         #### Set Data  #####################
         self.start = time.time()
-        self.y = x#[0:20]
-        self.x = y#[0:20]
+        self.y = []#[0:20]
+        self.x = []#[0:20]
         self.newx = np.copy(self.x)
         self.newy = np.copy(self.y)
         self.j = 0
         #  image plot
-        self.data = np.rot90(bg)
+        self.data = np.rot90(bg)#np.zeros((410,580)))#np.rot90(bg)
         self.newbg = np.copy(self.data)
         self.img = pg.ImageItem(border=None)
         self.img.setZValue(-100)
@@ -428,6 +483,7 @@ class App(QtGui.QMainWindow):
             self.connect(self.mk_contours_thread, QtCore.SIGNAL('add_contours'), self.add_contours)
             #self.connect(self.mk_contours_thread, SIGNAL('finished()'), self.done)
             self.current_conts = []
+            self.first_cont = True
             self.mk_contours_thread.start()
 
         #open the second window
@@ -438,9 +494,18 @@ class App(QtGui.QMainWindow):
 
         start= time.time()
         self.pdi = pg.PlotDataItem(self.x, self.y, pen={'color':'w','width':3})
-        #self.ti = pg.TextItem("Click to draw a vector",color='r')
+        self.pdi_list = []
+        n_colors = 5
+        grad = np.linspace(32,255,n_colors)
+        for x in grad:
+            self.pdi_list.append(pg.PlotDataItem([], [], pen={'color':(255,255,255,x),'width':3}))
         self.view.addItem(self.img)
-        self.view.addItem(self.pdi)
+        for v in self.pdi_list:
+            self.view.addItem(v)
+
+        #self.ti = pg.TextItem("Click to draw a vector",color='r')
+        #self.view.addItem(self.img)
+        #self.view.addItem(self.pdi)
         #self.view.addItem(self.ti)
 
        
@@ -467,11 +532,20 @@ class App(QtGui.QMainWindow):
 
     def mouseMoveEvent(self, e):
         #print 'here'
+        #constrain the mouse cursor
+        pos = e.pos()
+        if pos.x() > XWINDOW:
+            #cursor = self.mainbox.getCursor()
+            print pos.x(), pos.y(), XWINDOW, 'WUBDOW'
+            call('xdotool mousemove %i %i'%(XWINDOW, pos.y()), shell=True)
+            #e.setPos(XWINDOW, pos.y())
         if self.pressed:
             self.moved = True
             pos= e.pos()
             print [pos.x(),pos.y()]
             #self.current_pos = [pos.x()/XWINDOW,pos.y()/YWINDOW]
+            #self._update_color('red')
+            #for v in self.pdi_list:
             self.pdi.setPen(color='r',width=3)
             self.current_pos = [(pos.x()+x0)/(xscale),(pos.y()-y0)/yscale]
 
@@ -506,20 +580,22 @@ class App(QtGui.QMainWindow):
                     #get the new info from the computing thread
                     #time.sleep(1.5)
                     self.pdi.setData([],[])
+                    #self._update_pos([],[])
                     x_scaled = self.newx* YWIDTH - 7
                     y_scaled = YWIDTH- (self.newy * XWIDTH) - 12
                     self.x =  np.copy(x_scaled)
                     self.y = np.copy(y_scaled)
                     self.start = time.time()
-                    self.data = np.rot90(bg)
-                    self.img.setImage(self.data)
+                    #self.data = np.rot90(bg)
+                    #self.img.setImage(self.data)
                     self.mainbox.setCursor(QtCore.Qt.CrossCursor)
                     self.pressed = False; self.moved=False
+                    #self._update_color('grad')
                     self.pdi.setPen(color='w',width=3)
                 else:
                     pos = QMouseEvent.pos()
                     self.pressed = True
-                    self.start_pos = [(pos.x()+45)/(xscale),(pos.y()-15)/yscale]#[(pos.x()-self.leftmargin)/XWINDOW,(pos.y()-self.topmargin)/YWINDOW]
+                    self.start_pos = [(pos.x())/(xscale),(pos.y())/yscale]#[(pos.x()-self.leftmargin)/XWINDOW,(pos.y()-self.topmargin)/YWINDOW]
                     print self.start_pos, 'start'
                     #self.start_pos[0] = (self.start_pos[0]-x0)*XWIDTH; self.start_pos[1] = (self.start_pos[1]-y0)*YWIDTH
                     self.current_pos = [self.start_pos[0],self.start_pos[1]]
@@ -533,9 +609,26 @@ class App(QtGui.QMainWindow):
         if e.button() == QtCore.Qt.RightButton:
             e.accept()
 
-    def add_contours(self, cont_list):
+    def add_contours(self, cont_data):
         #need to remove old contours
         new_conts = []
+        cont_list = cont_data
+
+        '''colors = [(0,0,0,200),(128,128,128,200),(192,192,192,200)]#(102,102,153,200), (64,64,64,200),
+        if self.first_cont:
+            self.first_cont = False
+            for i in range(len(cont_list)):
+                c = cont_list[i]
+                for n, contour in enumerate(c):
+                    spi = pg.PlotDataItem(595-contour[::5,1]-12, contour[::5,0],pen={'color':colors[i],'width':3})
+                    self.current_conts.append(spi)
+        else:
+            c = cont_list[j]
+            for n, contour in enumerate(c):
+                spi = pg.PlotDataItem(595-contour[::5,1]-12, contour[::5,0],pen={'color':colors[j],'width':3})
+                self.current_conts[j] = spi #self.cont_plots.append(spi)
+        '''
+
         for c in self.current_conts:
             self.view.removeItem(c)
         for c in cont_list:
@@ -547,16 +640,48 @@ class App(QtGui.QMainWindow):
 
     def stage_data(self, data):
         self.newx, self.newy, self.newbg, self.calc_idle = data
+        
+
+    def _update_pos(self, x,y,color='w'):
+        #self.x = x; self.y = y
+        num_vals = 50 / len(self.pdi_list)
+        self.pdi_list[0].setPen(color=(255,255,255,32),width=3)
+        for i in range(len(self.pdi_list)):
+            v = self.pdi_list[i]
+            v.setData(x[i*num_vals:(i+1)*num_vals], y[i*num_vals:(i+1)*num_vals])
+        if color=='r':
+            v = self.pdi_list[0]
+            v.setPen(color='r',width=3)
+            for i in range(len(self.pdi_list)):
+                v = self.pdi_list[i]
+                v.setData(x[i*num_vals:(i+1)*num_vals], y[i*num_vals:(i+1)*num_vals])
+
+    def _update_color(self, color):
+            if color == 'red':
+                for v in self.pdi_list:
+                    v.setPen(color='r',width=3)
+            else:
+                n_colors = 5
+                grad = np.linspace(32,255,n_colors)
+                for i in range(len(self.pdi_list)):
+                    self.pdi_list[i].setPen(color='w', width=3)#(255,255,255,grad[i]))
+
 
     def _update(self):
           #print self.x
-          self.pdi.setData(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
+          #self.pdi.setData(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
+          self._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
+          #self._update_pos(self.y, self.x)
+
           if args.second_display:
             self.second_display._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
           #self.pdi.setData(self.y, self.x)
 
           if self.pressed and self.moved:
-            self.pdi.setData([YWIDTH-self.start_pos[0]*YWIDTH,YWIDTH-self.current_pos[0]*YWIDTH],[self.start_pos[1]*XWIDTH,self.current_pos[1]*XWIDTH])
+            #self.pdi.setData([YWIDTH-self.start_pos[0]*YWIDTH,YWIDTH-self.current_pos[0]*YWIDTH],[self.start_pos[1]*XWIDTH,self.current_pos[1]*XWIDTH])
+            if args.second_display:
+                self.second_display._update_pos([YWIDTH-self.start_pos[0]*YWIDTH,YWIDTH-self.current_pos[0]*YWIDTH],[self.start_pos[1]*XWIDTH,self.current_pos[1]*XWIDTH],color='r')
+            self._update_pos([YWIDTH-self.start_pos[0]*YWIDTH,YWIDTH-self.current_pos[0]*YWIDTH],[self.start_pos[1]*XWIDTH,self.current_pos[1]*XWIDTH],color='r')
 
           QtCore.QTimer.singleShot(6.5, self._update)
           self.counter += 1
@@ -575,9 +700,9 @@ class App(QtGui.QMainWindow):
             print 'updating'
             #waiting = input()
           if self.counter == len(self.newx)-20:
-            bg = np.load('display_dem.npy')#self.newbg / scaling #
-            bg[0,0] = -40
-            bg[0,1] = 1
+            bg = self.newbg / scaling #np.load('display_dem.npy')#
+            bg[0,0] = 40
+            bg[0,1] = -10
             self.data = np.rot90(bg,1)
             self.img.setImage(self.data)
             if args.second_display:
@@ -602,10 +727,10 @@ class App(QtGui.QMainWindow):
 
 
 parser = ArgumentParser()
-parser.add_argument("-i", "--idle", dest="idle_time", default=60., type=float, help="Set the amount of time (in seconds) until idle mode begins (default 600)")
+parser.add_argument("-i", "--idle", dest="idle_time", default=180., type=float, help="Set the amount of time (in seconds) until idle mode begins (default 600)")
 parser.add_argument("-t", "--timing", dest="INT_SECONDS", default=3.5, type=float, help="Set the number of seconds per iteration you would like (default 3.5)")
 parser.add_argument("-s", "--speed", dest="vel_scaling", type=float, default=.05, help="Set a scaling factor for the input velocities (default 1.0)")
-parser.add_argument("-c", "--contours", dest="cont_on", type=int, default=1, help="Turns the contours on (1) or off (0). Default is on.")
+parser.add_argument("-c", "--contours", dest="cont_on", type=int, default=0, help="Turns the contours on (1) or off (0). Default is on.")
 parser.add_argument("-d", "--debug", dest="debug", type=int, default=0, help="Use a pre-made density field for testing purposes. Disables tablet I/O. 1 for on, 0 for off.")
 parser.add_argument("-v", "--verbose", dest="verbose", type=bool, default=False, help="Save a plot displaying the potential field. (default False)")
 parser.add_argument("-a", "--audio", dest="music", type=bool, default=False, help="Play appropriate music. (default False)")
