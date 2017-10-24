@@ -15,7 +15,7 @@ from argparse import ArgumentParser
 
 start = time.time()
 end = time.time()
-scaling = 16
+scaling = 40 * 10
 YWIDTH = 580.#480.
 XWIDTH = 410.#600#640.
 y0 = 1.#-10#/2.
@@ -160,16 +160,17 @@ class GravityThread(QtCore.QThread):
                 #add an idle message! or plot a loading circle...?
                 time.sleep(1)
 
-    def read_input(self,inputs, vel_scaling=1,x_factor=580, y_factor=410):
+    def read_input(self,inputs, vel_scaling,x_factor=580, y_factor=410):
         x_i, y_i, x_f, y_f = inputs
-        pos = np.array([y_i * y_factor +10, x_i * x_factor-10])    
+        #pos = np.array([y_i * y_factor +10, x_i * x_factor-10]) 
+        pos = np.array([y_i * y_factor +0, x_i * x_factor-0])    
         d_x = (x_f - x_i)*x_factor
         d_y = (y_f - y_i)*y_factor
         ang = np.arctan2(d_y,d_x)
         mag = np.sqrt(d_x**2 + d_y**2) * vel_scaling
         vel = np.array([np.sin(ang)*mag, np.cos(ang)*mag])
         print pos, vel, 'pos and vel'
-        c = 50
+        '''c = 50
         if vel[0] > c:
             vel[0] = c  
         if vel[0] < -c:
@@ -177,7 +178,7 @@ class GravityThread(QtCore.QThread):
         if vel[1] > c:
             vel[1] = c
         if vel[1] < -c:
-            vel[1] = -c
+            vel[1] = -c'''
         self.in_pos = pos
         self.in_vel = vel
 
@@ -444,13 +445,13 @@ class App(QtGui.QMainWindow):
 
         #r = cmap_viridis
         r = cmap_jet
-        pos = np.linspace(1.00,.05,len(r)-1)
+        pos = np.linspace(1.9,-.9,len(r)-1)
         pos= np.append(pos, np.array([np.nan]))
         cmap = pg.ColorMap(pos, r)
-        lut = cmap.getLookupTable(-1,1.,256)#(-.009,1.05, 256)
+        lut = cmap.getLookupTable(-5.25,1.9,64)#(-.009,1.05, 256)
         if args.cmap_name == 'viridis':
             r = cmap_viridis
-            pos = np.linspace(1,-.25,len(r)-1)
+            pos = np.linspace(.7,-.3,len(r)-1)
             pos= np.append(pos, np.array([np.nan]))
             cmap = pg.ColorMap(pos, r)
             lut = cmap.getLookupTable(-.01,.95, 256)
@@ -572,26 +573,29 @@ class App(QtGui.QMainWindow):
                     #f = open('algorithm_input.txt','w')
                     #f.write('%f %f %f %f'%(self.start_pos[0],self.start_pos[1],self.end_pos[0],self.end_pos[1]))
                     #f.close()
-                    self.gravity_thread.read_input([self.start_pos[0],self.start_pos[1],self.end_pos[0],self.end_pos[1]])
+                    self.gravity_thread.read_input([self.start_pos[0],self.start_pos[1],self.end_pos[0],self.end_pos[1]],args.vel_scaling)
                     self.mainbox.setCursor(QtCore.Qt.WaitCursor)
-                    #time.sleep(2.5)
-                    self.counter = 0
+                    #time.sleep(2)
+                    
                     #x,y,bg,c = load_data() #/ scaling
                     #get the new info from the computing thread
                     #time.sleep(1.5)
-                    self.pdi.setData([],[])
-                    #self._update_pos([],[])
+                    #self.pdi.setData([],[])
+                    self._update_pos([],[])
                     x_scaled = self.newx* YWIDTH - 7
-                    y_scaled = YWIDTH- (self.newy * XWIDTH) - 12
-                    self.x =  np.copy(x_scaled)
-                    self.y = np.copy(y_scaled)
+                    #y_scaled = YWIDTH- (self.newy * XWIDTH) - 12
+                    self.x =  np.log( np.zeros(len(x_scaled))-1)
+                    self.y = np.copy(self.x)
+                    self.newx = []; self.newy = []
+                    self.counter = -1
                     self.start = time.time()
                     #self.data = np.rot90(bg)
                     #self.img.setImage(self.data)
                     self.mainbox.setCursor(QtCore.Qt.CrossCursor)
                     self.pressed = False; self.moved=False
                     #self._update_color('grad')
-                    self.pdi.setPen(color='w',width=3)
+                    #time.sleep(1)
+                    self.pdi.setPen(color='w',width=0)
                 else:
                     pos = QMouseEvent.pos()
                     self.pressed = True
@@ -600,8 +604,8 @@ class App(QtGui.QMainWindow):
                     #self.start_pos[0] = (self.start_pos[0]-x0)*XWIDTH; self.start_pos[1] = (self.start_pos[1]-y0)*YWIDTH
                     self.current_pos = [self.start_pos[0],self.start_pos[1]]
                     self.pdi.clear()
-                    self.pdi.setPen(color=(0,0,0,0),width=3)
-                    self.pdi.setData([0,0],[0,0])
+                    #self.pdi.setPen(color=(0,0,0,0),width=3)
+                    self.pdi.setData([],[])
                     self.mainbox.setCursor(QtCore.Qt.CrossCursor)
 
                      
@@ -639,13 +643,19 @@ class App(QtGui.QMainWindow):
         self.view.addItem(self.pdi)
 
     def stage_data(self, data):
+        if len(self.newx) <1:
+            self.counter = 0
+            self.pdi.setPen(color='w', width=3)
         self.newx, self.newy, self.newbg, self.calc_idle = data
+        #self.pdi.setPen(color='w', width=3)
         
 
     def _update_pos(self, x,y,color='w'):
         #self.x = x; self.y = y
         num_vals = 50 / len(self.pdi_list)
         self.pdi_list[0].setPen(color=(255,255,255,32),width=3)
+        if self.counter < 1:
+            x = []; y = [] 
         for i in range(len(self.pdi_list)):
             v = self.pdi_list[i]
             v.setData(x[i*num_vals:(i+1)*num_vals], y[i*num_vals:(i+1)*num_vals])
@@ -668,6 +678,7 @@ class App(QtGui.QMainWindow):
 
 
     def _update(self):
+        if self.counter >= 0:
           #print self.x
           #self.pdi.setData(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
           self._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
@@ -691,8 +702,8 @@ class App(QtGui.QMainWindow):
             #self.connect(self.gravity_thread, QtCore.SIGNAL('stage_data'), self.stage_data)
             #x, y = self.newx, self.newy#np.load('algorithm_output.npy')
             #print x
-            x_scaled = self.newx* YWIDTH - 7
-            y_scaled = YWIDTH- (self.newy * XWIDTH) - 12
+            x_scaled = self.newx* YWIDTH #- 7
+            y_scaled = YWIDTH- (self.newy * XWIDTH) #- 12
             self.x = np.append(self.x, x_scaled)
             self.y = np.append(self.y, y_scaled)
             #self.newx = np.zeros(1); self.newy = np.zeros(1)
@@ -701,8 +712,8 @@ class App(QtGui.QMainWindow):
             #waiting = input()
           if self.counter == len(self.newx)-20:
             bg = self.newbg / scaling #np.load('display_dem.npy')#
-            bg[0,0] = 40
-            bg[0,1] = -10
+            bg[0,0] = 600
+            bg[0,1] = -5
             self.data = np.rot90(bg,1)
             self.img.setImage(self.data)
             if args.second_display:
@@ -723,13 +734,15 @@ class App(QtGui.QMainWindow):
                 print time.time() - self.start,  'ANIMATING TOOK'
                 self.x = self.x[200:]
                 self.y = self.y[200:]
-                self.start = time.time()            
+                self.start = time.time()
+        else:
+            QtCore.QTimer.singleShot(1, self._update)            
 
 
 parser = ArgumentParser()
 parser.add_argument("-i", "--idle", dest="idle_time", default=180., type=float, help="Set the amount of time (in seconds) until idle mode begins (default 600)")
 parser.add_argument("-t", "--timing", dest="INT_SECONDS", default=3.5, type=float, help="Set the number of seconds per iteration you would like (default 3.5)")
-parser.add_argument("-s", "--speed", dest="vel_scaling", type=float, default=.05, help="Set a scaling factor for the input velocities (default 1.0)")
+parser.add_argument("-s", "--speed", dest="vel_scaling", type=float, default=.5, help="Set a scaling factor for the input velocities (default 1.0)")
 parser.add_argument("-c", "--contours", dest="cont_on", type=int, default=0, help="Turns the contours on (1) or off (0). Default is on.")
 parser.add_argument("-d", "--debug", dest="debug", type=int, default=0, help="Use a pre-made density field for testing purposes. Disables tablet I/O. 1 for on, 0 for off.")
 parser.add_argument("-v", "--verbose", dest="verbose", type=bool, default=False, help="Save a plot displaying the potential field. (default False)")
