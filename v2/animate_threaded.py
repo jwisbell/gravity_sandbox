@@ -52,8 +52,9 @@ def load_data():
 x, y, bg = load_data()
 
 
-cmap_jet = np.load('./aux/jet_cmap.npy')
-cmap_viridis = np.load('./aux/viridis_cmap.npy')
+#cmap_jet = np.load('./aux/jet_cmap.npy')
+cmap_jet = np.load('./aux/cmap_cont.npy')
+cmap_viridis = np.load('./aux/jet_cmap.npy')#np.load('./aux/viridis_cmap.npy')
 
 
 class GravityThread(QtCore.QThread):
@@ -114,7 +115,7 @@ class GravityThread(QtCore.QThread):
                 
                 """INTEGRATE FOR A WHILE"""
                 calc_start = time.time()
-                to_send = gravity_algorithm.run_orbit(particle, 3000, loops=0,step=0.001,edge_mode='reflect',kind='leapfrog2') #run for 1000 iterations and save the array
+                to_send = gravity_algorithm.run_orbit(particle, 1500, loops=0,step=0.001,edge_mode='reflect',kind='leapfrog2') #run for 1000 iterations and save the array
                 posx = [val[0] for val in to_send]
                 posy = [val[1] for val in to_send]
                 print 'Calculation took ', time.time()-calc_start
@@ -135,7 +136,7 @@ class GravityThread(QtCore.QThread):
                 
 
 
-                time.sleep(1.48 - (time.time() - start_loop))
+                time.sleep(.86 - (time.time() - start_loop))
                 dt = time.time()-start_loop
                 print 'LOOP TOOK: ', dt
                 if time.time() - last_idle >= args.idle_time:
@@ -150,8 +151,8 @@ class GravityThread(QtCore.QThread):
                 #scaled_dem_array = scaled_dem_array[40:-30, 30:-30] 
                 #scaled_dem_array = np.load('display_dem.npy') 
                 self.prev_dem = scaled_dem_array
-                x = np.zeros(200)
-                y = np.zeros(200)
+                x = np.zeros(100)
+                y = np.zeros(100)
                 #np.save('../circles.npy',scaled_dem_array)
                 #x,y = self.loading_circle()
                 #bck = np.zeros((410,610))
@@ -236,52 +237,161 @@ class ContourThread(QtCore.QThread):
     def update_bg(self, bg):
         self.new_bg = bg
 
+
+class PicButton(QtGui.QAbstractButton):
+    def __init__(self, pixmap, pixmap_hover, pixmap_pressed, parent=None):
+        super(PicButton, self).__init__(parent)
+        self.pixmap = pixmap
+        self.pixmap_hover = pixmap_hover
+        self.pixmap_pressed = pixmap_pressed
+
+        self.pressed.connect(self.update)
+        self.released.connect(self.update)
+
+    def paintEvent(self, event):
+        pix = self.pixmap_hover if self.underMouse() else self.pixmap
+        if self.isDown():
+            pix = self.pixmap_pressed
+
+        painter = QtGui.QPainter(self)
+        painter.drawPixmap(event.rect(), pix)
+
+    def enterEvent(self, event):
+        self.update()
+
+    def leaveEvent(self, event):
+        self.update()
+
+    def sizeHint(self):
+        return QtCore.QSize(200, 200)
+
+
 class Display(QtGui.QWidget):
     def __init__(self, parent=None):
         super(Display,self).__init__(parent)
         #### Create Gui Elements ###########
         self.mainbox = QtGui.QWidget()
         #self.setCentralWidget(self.mainbox)
-        self.setLayout(QtGui.QVBoxLayout())
+        self.setLayout(QtGui.QGridLayout())
         self.setCursor(QtCore.Qt.CrossCursor)
         self.setMouseTracking(True)
 
+        ###LAYOUT THE DSIPLAY ###
+        self.bck=QtGui.QLabel(self)
+        self.bck.setPixmap(QtGui.QPixmap('test_background.png'))
+        self.bck.setGeometry(0,0,1920,1080)
+        self.bck.setScaledContents(True)
+        self.bck.setMinimumSize(1,1)
+        self.bck.move(0,0)
+    
         self.canvas = pg.GraphicsLayoutWidget()
         self.canvas.setMouseTracking(True)
+        #self.canvas.setGeometry(320,120,1000,960)
+        #self.canvas.move(250,250)
+        #layout = QtGui.QGridLayout()
         self.layout().addWidget(self.canvas)
-        self.pressed=False; self.moved=False        
+        self.canvas.setStyleSheet("background-image: url(./test_background.png);")
+        #layout.move(120,120)
+
+        #### BUTTONS ######
+        self.trail_button = QtGui.QPushButton('Trail', self)
+        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
+        self.trail_button.clicked.connect(self.handleButton)
+        self.trail_button.move(1280+480,270)
+
+        self.cmap_button = QtGui.QPushButton('ColorMap', self)
+        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
+        self.cmap_button.clicked.connect(self.handleButton)
+        self.cmap_button.move(1280+480,540)
+
+        self.clear_button = QtGui.QPushButton('Clear', self)
+        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
+        self.clear_button.clicked.connect(self.handleButton)
+        self.clear_button.move(1280+480,540+270)
+
+        self.about_button = QtGui.QPushButton('About', self)
+        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
+        self.about_button.clicked.connect(self.handleButton)
+        self.about_button.move(70,360)
+
+        self.sarndbox_button = QtGui.QPushButton('SARndbox', self)
+        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
+        self.sarndbox_button.clicked.connect(self.handleButton)
+        self.sarndbox_button.move(70,720)
+
+
+        '''self.layout().addItem(spacer,0,0)
+                                self.layout().addItem(spacer,0,1)
+                                self.layout().addItem(spacer,0,2)
+                                self.layout().addItem(spacer,1,0)
+                                self.layout().addItem(spacer,1,1)
+                                self.layout().addItem(spacer,1,2)
+                                self.layout().addItem(spacer,2,0)
+                                self.layout().addItem(spacer,2,1)
+                                self.layout().addItem(spacer,2,2)
+                                self.layout().addItem(spacer,3,0)
+                                self.layout().addItem(spacer,3,1)
+                                self.layout().addItem(spacer,3,2)'''
+
+        #self.layout().addWidget(self.about_button,0,0)
+        #self.layout().addWidget(self.canvas,0,1)
+        
+        #self.layout().addWidget(self.sarndbox_button,1,0)
+        
+        #self.layout().addWidget(self.trail_button,0,2)
+        #self.layout().setRowStretch(1,.5)
+        self.pressed=False; self.moved=False  
+
+        oImage = QtGui.QImage("test_background.png")
+        #oImage.move(0,0)
+        sImage = oImage#.scaled(QSize(300,200))                   # resize Image to widgets size
+        palette = QtGui.QPalette()
+        palette.setBrush(10, QtGui.QBrush(sImage))                     # 10 = Windowrole
+        self.canvas.setPalette(palette)
         
         self.view = self.canvas.addViewBox()
-        self.view.setAspectLocked(False)
+        self.view.setAspectLocked(True)
         self.view.setRange(xRange=[0,580],yRange=[0,410],padding=-1)
         self.view.setMouseEnabled(x=False,y=False)
+        self.view.setBackgroundColor((.5,.5,.5,1.))
 
         """
         Adjust margins to better align the Kinect data with the projected image.
         Order is left, top, right, bottom. 
         """ 
-        self.leftmargin = -20 ; self.topmargin = -10; self.rightmargin =60; self.bottommargin = 20
+        self.leftmargin = 240 ; self.topmargin = 20; self.rightmargin =240; self.bottommargin = 20
         self.setContentsMargins(self.leftmargin, self.topmargin, self.rightmargin, self.bottommargin)
 
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.FramelessWindowHint)
         self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
         
-        self.setGeometry(1280,0, XWINDOW, YWINDOW) # JUST IN CASE, CTRL-ALT-ESC    
+        self.setGeometry(0,0, 1920, 1080) # JUST IN CASE, CTRL-ALT-ESC    
         self.canvas.nextRow()
 
         #r = cmap_viridis
+        self.lutval = 1
         r = cmap_jet
-        pos = np.linspace(1.00,-.3,len(r)-1)
+        pos = np.linspace(1.9,-.9,len(r)-1)
         pos= np.append(pos, np.array([np.nan]))
-        cmap = pg.ColorMap(pos, r)
-        lut = cmap.getLookupTable(.5,1.0,256)#(-.009,1.05, 256)
-        if args.cmap_name == 'viridis':
-            r = cmap_viridis
-            pos = np.linspace(1,-.25,len(r)-1)
-            pos= np.append(pos, np.array([np.nan]))
-            cmap = pg.ColorMap(pos, r)
-            lut = cmap.getLookupTable(-.01,.95, 256)
+        self.cmap = pg.ColorMap(pos, r)
+        self.lut = self.cmap.getLookupTable(-5.25,1.9,256)#(-.009,1.05, 256)
+        #if args.cmap_name == 'viridis':
+        r2 = cmap_viridis
+        pos2 = np.linspace(1.9,-.9,len(r2)-1)
+        pos2= np.append(pos2, np.array([np.nan]))
+        self.cmap2 = pg.ColorMap(pos2, r2)
+        self.lut2 = self.cmap2.getLookupTable(-5.25,1.9,256)
+        """
+        r2 = cmap_viridis
+        pos2 = np.linspace(.7,-.3,len(r2)-1)
+        pos2= np.append(pos2, np.array([np.nan]))
+        self.cmap2 = pg.ColorMap(pos2, r2)
+        self.lut2 = self.cmap2.getLookupTable(-.01,.95, 256)
+        """
+        #[0., 1., 0.5, 0.25, 0.75])
         
+
+    
         #### Set Data  #####################
         self.start = time.time()
         self.y = []#[0:20]
@@ -294,7 +404,7 @@ class Display(QtGui.QWidget):
         self.newbg = np.copy(self.data)
         self.img = pg.ImageItem(border=None)
         self.img.setZValue(-100)
-        self.img.setLookupTable(lut)
+        self.img.setLookupTable(self.lut)
         self.img.setImage(self.data)
         self.current_conts = []
         self.pdi_list = []
@@ -332,6 +442,16 @@ class Display(QtGui.QWidget):
                 print ""'''
             #self.connect(mk_contours_thread.terminate)
             self.close()
+            sys.exit()
+    def handleButton(self):
+        print ('Hello World')
+        if self.lutval == 1:
+            self.img.setLookupTable(self.lut2)
+            self.lutval = 2
+        else:
+            self.img.setLookupTable(self.lut)
+            self.lutval = 1
+        
 
     def _update_pos(self, x,y, color='w'):
         self.x = x; self.y = y
@@ -355,8 +475,8 @@ class Display(QtGui.QWidget):
         self.pdi5.setData(x[40:],y[40:])'''
 
     def _update_bg(self, bg):
-        bg[0,0] = -40
-        bg[0,1] = 1
+        bg[0,0] = 600
+        bg[0,1] = -5
         self.data = np.rot90(bg,1)
         self.img.setImage(self.data)
         if args.cont_on:
@@ -435,7 +555,7 @@ class App(QtGui.QMainWindow):
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.FramelessWindowHint)
         self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
         
-        self.setGeometry(0,0, XWINDOW, YWINDOW) # JUST IN CASE, CTRL-ALT-ESC
+        self.setGeometry(1920,0, XWINDOW, YWINDOW) # JUST IN CASE, CTRL-ALT-ESC
         self.canvas.mouseMoveEvent = self.mainbox.mouseMoveEvent
         self.mainbox.setFocus()
 
@@ -448,7 +568,7 @@ class App(QtGui.QMainWindow):
         pos = np.linspace(1.9,-.9,len(r)-1)
         pos= np.append(pos, np.array([np.nan]))
         cmap = pg.ColorMap(pos, r)
-        lut = cmap.getLookupTable(-5.25,1.9,64)#(-.009,1.05, 256)
+        lut = cmap.getLookupTable(-5.25,1.9,256)#(-.009,1.05, 256)
         if args.cmap_name == 'viridis':
             r = cmap_viridis
             pos = np.linspace(.7,-.3,len(r)-1)
@@ -724,16 +844,16 @@ class App(QtGui.QMainWindow):
           if self.counter >= len(self.newx):
             try:
                 print time.time() - self.start,  'ANIMATING TOOK'
-                time.sleep(1.25 - (time.time() - self.start))
+                time.sleep(.9 - (time.time() - self.start))
                 self.counter = 0
-                self.x = self.x[200:]
-                self.y = self.y[200:]
+                self.x = self.x[100:]
+                self.y = self.y[100:]
                 self.start = time.time()
             except:
                 self.counter = 0
                 print time.time() - self.start,  'ANIMATING TOOK'
-                self.x = self.x[200:]
-                self.y = self.y[200:]
+                self.x = self.x[100:]
+                self.y = self.y[100:]
                 self.start = time.time()
         else:
             QtCore.QTimer.singleShot(1, self._update)            
