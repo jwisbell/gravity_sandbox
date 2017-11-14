@@ -29,6 +29,8 @@ xscale = 600.*2.008 ; yscale = 495.*2.003
 X_KERNEL =  np.load('./aux/dx_dft.npy')#fits.getdata('./aux/dx_kernel.fits',0)  ##
 Y_KERNEL = np.load('./aux/dy_dft.npy') #fits.getdata('./aux/dy_kernel.fits',0) #
 
+TRACE_BOOL = False
+TRACE_LENGTH = 0
 
 
 def load_data():
@@ -55,6 +57,45 @@ x, y, bg = load_data()
 #cmap_jet = np.load('./aux/jet_cmap.npy')
 cmap_jet = np.load('./aux/cmap_cont.npy')
 cmap_viridis = np.load('./aux/jet_cmap.npy')#np.load('./aux/viridis_cmap.npy')
+
+
+
+'''class AboutScreen(Screen):
+    
+    aboutImage = assetsdirectory+str('gray_star.png') #ABOUT SCREEN BACKGROUND IMAGE 
+    
+    def __init__(self, **kwargs):
+        super(AboutScreen, self).__init__(**kwargs)
+        
+        layout = FloatLayout()
+        layout.width = Window.width
+        layout.height = Window.height
+        layout.x = Window.width/2 - layout.width/2
+        layout.y = Window.height/2 - layout.height/2
+        self.add_widget(layout)
+        
+        img = Image(source = self.aboutImage)
+        img.size = (Window.width*1.0, Window.height*1.0)
+        img.pos = (-Window.width*0.0, -Window.height*0.0)
+        img.opacity = 0.4
+        self.add_widget(img)
+        
+        aboutText = Label(text= 'GravBox is the interface application for the Augmented Reality (AR) Sandbox for gravitational dynamics simulations designed and built\nby Dr. Hai Fu\'s Introduction to Astrophysics class during the 2016-2017 academic year and beyond.\nGravBox itself was designed by Zachary Luppen, Erin Maier, and Mason Reed.\n\nAR Sandbox is the result of an NSF-funded project on informal science education for freshwater lake and watershed science developed by the\nUC Davis\' W.M. Keck Center for Active Visualization in the Earth Sciences (KeckCAVES),\ntogether with the UC Davis Tahoe Environmental Research Center, Lawrence Hall of Science, and ECHO Lake Aquarium and Science Center.', halign='center', valign='center')
+        aboutText.pos = (.25, .25)
+        self.add_widget(aboutText)
+                
+        backBtn = MyButton(text = 'BACK') # back button
+        backBtn.size_hint = (.1, .1)
+        backBtn.pos_hint ={'x': 0, 'y': .90}
+        backBtn.background_color = [.4, .4, .4, 1]
+        backBtn.bind(on_release = self.backButton) #when the button is released the callback function is called
+        self.add_widget(backBtn)
+        
+    def backButton(self, *args): # returns to screen1 - interaction screen     
+        self.manager.current = 'screen1'
+        self.manager.transition.direction = 'right'
+'''
+
 
 
 class GravityThread(QtCore.QThread):
@@ -135,8 +176,8 @@ class GravityThread(QtCore.QThread):
                 self.current_vel = [particle.vel[0], particle.vel[1]]
                 
 
-
-                time.sleep(.86 - (time.time() - start_loop))
+                print 'TRACE LENGTH', TRACE_LENGTH
+                time.sleep(.87 + (.0002*TRACE_LENGTH) - (time.time() - start_loop))
                 dt = time.time()-start_loop
                 print 'LOOP TOOK: ', dt
                 if time.time() - last_idle >= args.idle_time:
@@ -278,7 +319,7 @@ class Display(QtGui.QWidget):
 
         ###LAYOUT THE DSIPLAY ###
         self.bck=QtGui.QLabel(self)
-        self.bck.setPixmap(QtGui.QPixmap('test_background.png'))
+        self.bck.setPixmap(QtGui.QPixmap('./aux/starfield.png'))
         self.bck.setGeometry(0,0,1920,1080)
         self.bck.setScaledContents(True)
         self.bck.setMinimumSize(1,1)
@@ -290,23 +331,28 @@ class Display(QtGui.QWidget):
         #self.canvas.move(250,250)
         #layout = QtGui.QGridLayout()
         self.layout().addWidget(self.canvas)
-        self.canvas.setStyleSheet("background-image: url(./test_background.png);")
+        #self.canvas.setStyleSheet("background-image: url(./test_background.png);")
         #layout.move(120,120)
 
         #### BUTTONS ######
         self.trail_button = QtGui.QPushButton('Trail', self)
         #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
-        self.trail_button.clicked.connect(self.handleButton)
+        self.trail_button.clicked.connect(self.start_trace)
         self.trail_button.move(1280+480,270)
 
         self.cmap_button = QtGui.QPushButton('ColorMap', self)
+        self.menu = QtGui.QMenu()
+        #self.menu.addAction('Contours',self.set_cont)
+        self.menu.addAction('No Contours', self.set_nocont)
+        self.menu.addAction('Black', self.set_black)
+        self.cmap_button.setMenu(self.menu)
         #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
         self.cmap_button.clicked.connect(self.handleButton)
         self.cmap_button.move(1280+480,540)
 
         self.clear_button = QtGui.QPushButton('Clear', self)
         #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
-        self.clear_button.clicked.connect(self.handleButton)
+        self.clear_button.clicked.connect(self.end_trace)
         self.clear_button.move(1280+480,540+270)
 
         self.about_button = QtGui.QPushButton('About', self)
@@ -316,7 +362,7 @@ class Display(QtGui.QWidget):
 
         self.sarndbox_button = QtGui.QPushButton('SARndbox', self)
         #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
-        self.sarndbox_button.clicked.connect(self.handleButton)
+        self.sarndbox_button.clicked.connect(self.start_sarndbox)
         self.sarndbox_button.move(70,720)
 
 
@@ -342,12 +388,6 @@ class Display(QtGui.QWidget):
         #self.layout().setRowStretch(1,.5)
         self.pressed=False; self.moved=False  
 
-        oImage = QtGui.QImage("test_background.png")
-        #oImage.move(0,0)
-        sImage = oImage#.scaled(QSize(300,200))                   # resize Image to widgets size
-        palette = QtGui.QPalette()
-        palette.setBrush(10, QtGui.QBrush(sImage))                     # 10 = Windowrole
-        self.canvas.setPalette(palette)
         
         self.view = self.canvas.addViewBox()
         self.view.setAspectLocked(True)
@@ -369,7 +409,7 @@ class Display(QtGui.QWidget):
         self.canvas.nextRow()
 
         #r = cmap_viridis
-        self.lutval = 1
+        self.lutval = 2
         r = cmap_jet
         pos = np.linspace(1.9,-.9,len(r)-1)
         pos= np.append(pos, np.array([np.nan]))
@@ -381,6 +421,12 @@ class Display(QtGui.QWidget):
         pos2= np.append(pos2, np.array([np.nan]))
         self.cmap2 = pg.ColorMap(pos2, r2)
         self.lut2 = self.cmap2.getLookupTable(-5.25,1.9,256)
+
+        r3 = np.array([[0,0,0,256],[0,0,0,256],[0,0,0,256]])
+        pos3 = np.linspace(1.9,-.9,len(r3)-1)
+        pos3= np.append(pos3, np.array([np.nan]))
+        self.cmap3 = pg.ColorMap(pos3, r3)
+        self.lut3 = self.cmap3.getLookupTable(-5.25,1.9,256)
         """
         r2 = cmap_viridis
         pos2 = np.linspace(.7,-.3,len(r2)-1)
@@ -404,7 +450,7 @@ class Display(QtGui.QWidget):
         self.newbg = np.copy(self.data)
         self.img = pg.ImageItem(border=None)
         self.img.setZValue(-100)
-        self.img.setLookupTable(self.lut)
+        self.img.setLookupTable(self.lut2)
         self.img.setImage(self.data)
         self.current_conts = []
         self.pdi_list = []
@@ -451,7 +497,25 @@ class Display(QtGui.QWidget):
         else:
             self.img.setLookupTable(self.lut)
             self.lutval = 1
+
+    def set_black(self):
+        self.img.setLookupTable(self.lut3)
+    def set_nocont(self):
+        self.img.setLookupTable(self.lut2)
+    def set_cont(self):
+        self.img.setLookupTable(self.lut)
         
+    def start_sarndbox(self):
+        print 'call whatever starts the sarndbox'
+        call('/home/gravbox/src/SARndbox-2.3/bin/SARndbox -uhm -fpv -rs 0.0&', shell=True)
+
+    def start_trace(self):
+        global TRACE_BOOL
+        TRACE_BOOL = True
+
+    def end_trace(self):
+        global TRACE_BOOL
+        TRACE_BOOL = False
 
     def _update_pos(self, x,y, color='w'):
         self.x = x; self.y = y
@@ -564,7 +628,7 @@ class App(QtGui.QMainWindow):
         self.canvas.nextRow()
 
         #r = cmap_viridis
-        r = cmap_jet
+        '''r = cmap_jet
         pos = np.linspace(1.9,-.9,len(r)-1)
         pos= np.append(pos, np.array([np.nan]))
         cmap = pg.ColorMap(pos, r)
@@ -574,7 +638,13 @@ class App(QtGui.QMainWindow):
             pos = np.linspace(.7,-.3,len(r)-1)
             pos= np.append(pos, np.array([np.nan]))
             cmap = pg.ColorMap(pos, r)
-            lut = cmap.getLookupTable(-.01,.95, 256)
+            lut = cmap.getLookupTable(-.01,.95, 256)'''
+
+        r = cmap_viridis
+        pos = np.linspace(1.9,-.9,len(r)-1)
+        pos= np.append(pos, np.array([np.nan]))
+        cmap = pg.ColorMap(pos, r)
+        lut = cmap.getLookupTable(-5.25,1.9,256)
         #[0., 1., 0.5, 0.25, 0.75])
         
         #### Set Data  #####################
@@ -634,6 +704,7 @@ class App(QtGui.QMainWindow):
         self.counter = 0
         self.fps = 0. 
         self.lastupdate = time.time()
+        self.tracex = []; self.tracey = []
         
         #### Start  #####################
         self.view.mouseClickEvent = self.new_MouseClickEvent
@@ -716,6 +787,10 @@ class App(QtGui.QMainWindow):
                     #self._update_color('grad')
                     #time.sleep(1)
                     self.pdi.setPen(color='w',width=0)
+                    self.tracex = []
+                    self.tracey = []
+                    global TRACE_LENGTH
+                    TRACE_LENGTH = 0
                 else:
                     pos = QMouseEvent.pos()
                     self.pressed = True
@@ -727,6 +802,10 @@ class App(QtGui.QMainWindow):
                     #self.pdi.setPen(color=(0,0,0,0),width=3)
                     self.pdi.setData([],[])
                     self.mainbox.setCursor(QtCore.Qt.CrossCursor)
+                    self.tracex = []
+                    self.tracey = []
+                    global TRACE_LENGTH
+                    TRACE_LENGTH = 0
 
                      
     def new_MouseClickEvent(self, e):
@@ -779,6 +858,17 @@ class App(QtGui.QMainWindow):
         for i in range(len(self.pdi_list)):
             v = self.pdi_list[i]
             v.setData(x[i*num_vals:(i+1)*num_vals], y[i*num_vals:(i+1)*num_vals])
+        if TRACE_BOOL:
+            v = self.pdi_list[0]
+            i=1
+            v.setData(np.append(x[i*num_vals:(i+1)*num_vals],self.tracex), np.append(y[i*num_vals:(i+1)*num_vals],self.tracey))
+            self.tracex = np.append(x[i*num_vals:(i+1)*num_vals],self.tracex)[::]#np.append(x,self.tracex)[::5]
+            self.tracey = np.append(y[i*num_vals:(i+1)*num_vals],self.tracey)[::]#np.append(y,self.tracey)[::5]
+            global TRACE_LENGTH
+            TRACE_LENGTH = len(self.tracex)
+            if len(self.tracex) > 10000:
+                self.tracex = self.tracex[:10000]
+                self.tracey = self.tracey[:10000]
         if color=='r':
             v = self.pdi_list[0]
             v.setPen(color='r',width=3)
@@ -842,6 +932,11 @@ class App(QtGui.QMainWindow):
                 self.mk_contours_thread.update_bg(bg)
 
           if self.counter >= len(self.newx):
+            if TRACE_BOOL == False:
+                self.tracex = []
+                self.tracey = []
+                global TRACE_LENGTH
+                TRACE_LENGTH = 0
             try:
                 print time.time() - self.start,  'ANIMATING TOOK'
                 time.sleep(.9 - (time.time() - self.start))
