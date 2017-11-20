@@ -18,8 +18,8 @@ end = time.time()
 scaling = 40 * 10
 YWIDTH = 580.#480.
 XWIDTH = 410.#600#640.
-y0 = 1.#-10#/2.
-x0 = 1#15#2.
+y0 = 60.+40#-10#/2.
+x0 = 320+18#15#2.
 XWINDOW = 640.*2   
 YWINDOW = 512.*2 
 #xscale = 600.*2.055 ; yscale = 495.*2.045
@@ -81,7 +81,7 @@ class AboutScreen(QtGui.QWidget):
         self.exit_button.clicked.connect(self.exit_about)
         self.exit_button.move(0,50)
 
-    def exit_about():
+     def exit_about(self):
         self.close()
 
 class WelcomeScreen(QtGui.QWidget):
@@ -106,7 +106,7 @@ class WelcomeScreen(QtGui.QWidget):
         self.exit_button.clicked.connect(self.exit)
         self.exit_button.move(0,50)
 
-    def exit():
+     def exit(self):
         #self.close()
         self.lower()
 
@@ -119,7 +119,7 @@ class GravityThread(QtCore.QThread):
         self.previous_vel = np.copy(self.current_vel)
         self.in_pos = np.copy(self.previous_pos)
         self.in_vel = np.copy(self.previous_vel)
-        self.baseplane,self.bounds = topo.ar_calibrate()#topo.generate_baseplane()
+        self.baseplane,self.bounds = topo.ar_calibration()#topo.generate_baseplane()
         #self.prev_dem = np.load('display_dem.npy')
         self.prev_dem = topo.update_surface(self.baseplane,self.bounds, None)
         self.idle = True
@@ -188,7 +188,6 @@ class GravityThread(QtCore.QThread):
                 self.current_vel = [particle.vel[0], particle.vel[1]]
                 
 
-                print 'TRACE LENGTH', TRACE_LENGTH
                 time.sleep(.87 + (.0002*TRACE_LENGTH) - (time.time() - start_loop))
                 dt = time.time()-start_loop
                 print 'LOOP TOOK: ', dt
@@ -229,26 +228,25 @@ class GravityThread(QtCore.QThread):
         self.in_vel = vel
 
 class Surface(QtGui.QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, aspectLock=True):
         super(Surface,self).__init__(parent)
         #### Create Gui Elements ###########
         self.mainbox = QtGui.QWidget()
         #self.setCentralWidget(self.mainbox)
         self.setLayout(QtGui.QGridLayout())
         self.setCursor(QtCore.Qt.CrossCursor)
-        #self.setMouseTracking(True)
-
-
+        
         self.canvas = pg.GraphicsLayoutWidget()
         self.layout().addWidget(self.canvas)
         self.view = self.canvas.addViewBox()
-        self.view.setAspectLocked(True)
+        self.view.setAspectLocked(aspectLock)
         self.view.setRange(xRange=[0,580],yRange=[0,410],padding=-1)
         self.view.setMouseEnabled(x=False,y=False)
         self.view.setBackgroundColor((.5,.5,.5,1.))
 
-        self.setGeometry(0,0, 1280, 960) # JUST IN CASE, CTRL-ALT-ESC    
+        self.setGeometry(0,0, 1280, 900) # JUST IN CASE, CTRL-ALT-ESC    
         self.canvas.nextRow()
+        self.setContentsMargins(0,-20,0,-20)
 
         #r = cmap_viridis
         r = cmap_jet
@@ -264,7 +262,7 @@ class Surface(QtGui.QWidget):
         self.lut2 = self.cmap2.getLookupTable(-5.25,1.9,256)
 
         r4 = cmap_sauron
-        pos4 = np.linspace(1.9,-.9,len(r2)-1)
+        pos4 = np.linspace(1.9,-.9,len(r4)-1)
         pos4= np.append(pos4, np.array([np.nan]))
         self.cmap4 = pg.ColorMap(pos4, r4)
         self.lut4 = self.cmap4.getLookupTable(-5.25,1.9,256)
@@ -304,26 +302,37 @@ class Surface(QtGui.QWidget):
             self.view.addItem(v)
 
         self.tracex = []; self.tracey = []
+        self.pressed =False; self.moved = False
+        self.xlow = 0; self.ylow = 0
+        self.xhigh = 0; self.yhigh = 0
+        self.view.mouseClickEvent = self.new_MouseClickEvent
+        self.setMouseTracking(True)
 
     def _update_pos(self, x,y, color='w'):
-        self.x = x; self.y = y
-        num_vals = 50 / len(self.pdi_list)
-        self.pdi_list[0].setPen(color=(255,255,255,32),width=3)
-        for i in range(len(self.pdi_list)):
-            v = self.pdi_list[i]
-            v.setData(x[i*num_vals:(i+1)*num_vals], y[i*num_vals:(i+1)*num_vals])
-        if TRACE_BOOL:
-            v = self.pdi_list[0]
-            i=1
-            v.setData(np.append(x[i*num_vals:(i+1)*num_vals],self.tracex), np.append(y[i*num_vals:(i+1)*num_vals],self.tracey))
-            self.tracex = np.append(x[i*num_vals:(i+1)*num_vals],self.tracex)[::]#np.append(x,self.tracex)[::5]
-            self.tracey = np.append(y[i*num_vals:(i+1)*num_vals],self.tracey)[::]#np.append(y,self.tracey)[::5]
-            if len(self.tracex) > 10000:
-                self.tracex = self.tracex[:10000]
-                self.tracey = self.tracey[:10000]
-        else:
-            self.tracex = []
-            self.tracey = []
+
+        if len(x) < 1 and color != 'r':
+            for i in range(len(self.pdi_list)):
+                v = self.pdi_list[i]
+                v.setData([], [])
+        else:    
+            self.x = x; self.y = y
+            num_vals = 50 / len(self.pdi_list)
+            self.pdi_list[0].setPen(color=(255,255,255,32),width=3)
+            for i in range(len(self.pdi_list)):
+                v = self.pdi_list[i]
+                v.setData(x[i*num_vals:(i+1)*num_vals], y[i*num_vals:(i+1)*num_vals])
+            if TRACE_BOOL:
+                v = self.pdi_list[0]
+                i=1
+                v.setData(np.append(x[i*num_vals:(i+1)*num_vals],self.tracex), np.append(y[i*num_vals:(i+1)*num_vals],self.tracey))
+                self.tracex = np.append(x[i*num_vals:(i+1)*num_vals],self.tracex)[::]#np.append(x,self.tracex)[::5]
+                self.tracey = np.append(y[i*num_vals:(i+1)*num_vals],self.tracey)[::]#np.append(y,self.tracey)[::5]
+                if len(self.tracex) > 10000:
+                    self.tracex = self.tracex[:10000]
+                    self.tracey = self.tracey[:10000]
+            else:
+                self.tracex = []
+                self.tracey = []
         if color=='r':
             v = self.pdi_list[0]
             v.setPen(color='r',width=3)
@@ -331,24 +340,58 @@ class Surface(QtGui.QWidget):
                 v = self.pdi_list[i]
                 v.setData(x[i*num_vals:(i+1)*num_vals], y[i*num_vals:(i+1)*num_vals])
         
-    def _update_bg(self, bg, lutval):
+    def _update_bg(self, bg):
         bg[0,0] = 600
         bg[0,1] = -5
         self.data = np.rot90(bg,1)
         self.img.setImage(self.data)
-        if lutval != self.lutval:
+        '''if lutval != self.lutval:
             self.lutval = lutval
             if self.lutval == 1:
                 self.img.setLookupTable(self.lut2)
             elif self.lutval == 2:
                 self.img.setLookupTable(self.lut3)
-
+        '''
         if args.cont_on:
             self.mk_contours_thread.update_bg(bg)
 
     def set_cmap(self, imap):
         self.img.setLookupTable(self.luts[imap])
 
+    def mouseMoveEvent(self, e):
+        #constrain the mouse cursor?
+        pos = e.pos()
+        print pos, 'cursor position, child'
+
+        if self.pressed:
+            self.moved = True
+            pos= e.pos()
+            self.current_pos = [(pos.x())/(1280.),(pos.y())/960.]
+
+
+    def mousePressEvent(self, QMouseEvent):
+        if QMouseEvent.button() == QtCore.Qt.LeftButton:
+            pos = QMouseEvent.pos()
+
+            if not self.pressed:
+                self.pressed =True
+                self.parent().pressed = True
+                self.start_pos = [pos.x()/1280., pos.y()/960.]
+                self.parent().start_pos = self.start_pos
+                print pos.x(), pos.y(), 'click click mfer'
+                self.emit(QtCore.SIGNAL('clear data'))
+
+            elif self.pressed:
+                self.pressed=False
+                self.end_pos = [pos.x()/1280., pos.y()/960.]
+                self.emit(QtCore.SIGNAL('clear data'),self.start_pos)
+                #send a signal to parent with start and end positions
+                self.emit(QtCore.SIGNAL('start_computation'), [self.start_pos, self.end_pos])
+                
+    def new_MouseClickEvent(self, e):
+        if e.button() == QtCore.Qt.RightButton:
+            e.accept()
+    
 
 class Display(QtGui.QWidget):
     def __init__(self, parent=None):
@@ -360,6 +403,7 @@ class Display(QtGui.QWidget):
         self.setCursor(QtCore.Qt.CrossCursor)
         self.setMouseTracking(True)
         self.setGeometry(0,0,1920+1280,1080)
+        self.setFocus()
 
         ###LAYOUT THE DSIPLAY ###
         self.bck=QtGui.QLabel(self)
@@ -370,15 +414,16 @@ class Display(QtGui.QWidget):
         self.bck.move(0,0)
 
         ### HELPER WIDGETS ####
-        self.home = WelcomeScreen()
+        self.home = WelcomeScreen(self)
         self.home.move(0,0)
 
         ### PLOTTING WIDGET(S) ####
-        self.surface1 = Surface()
-        self.surface2 = Surface()#surface1
-        self.surface1.move(100,100)
-        self.surface2.move(100+1280,100)
-    
+        self.surface1 = Surface(self)
+        self.surface2 = Surface(self, aspectLock=False)#surface1
+        self.surface1.move(320,60)
+        self.surface1.raise_()
+        self.surface2.move(1920,-20)
+
 
         #### BUTTONS ######
         self.trail_button = QtGui.QPushButton('Trail', self)
@@ -390,7 +435,7 @@ class Display(QtGui.QWidget):
         self.menu = QtGui.QMenu()
         #self.menu.addAction('Contours',self.set_cont)
         self.menu.addAction('Default', self.set_nocont)
-        self.menu.addAction('Sauron', self.set_saruon)
+        self.menu.addAction('Sauron', self.set_sauron)
         self.menu.addAction('Viridis', self.set_viridis)
         self.menu.addAction('Black', self.set_black)
         self.cmap_button.setMenu(self.menu)
@@ -422,7 +467,7 @@ class Display(QtGui.QWidget):
         Adjust margins to align stuff.
         Order is left, top, right, bottom. 
         """ 
-        self.leftmargin = 240 ; self.topmargin = 20; self.rightmargin =240; self.bottommargin = 20
+        self.leftmargin = 240 ; self.topmargin = 30; self.rightmargin =240; self.bottommargin = 30
         self.setContentsMargins(self.leftmargin, self.topmargin, self.rightmargin, self.bottommargin)
 
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.FramelessWindowHint)
@@ -433,15 +478,29 @@ class Display(QtGui.QWidget):
         self.gravity_thread = GravityThread()
         self.connect(self.gravity_thread, QtCore.SIGNAL('stage_data'), self.stage_data)
         self.gravity_thread.start()
-        self.calc_idle = True       
+        self.calc_idle = True
+
+        self.connect(self.surface1, QtCore.SIGNAL('start_computation'), self.start_computation)
+        self.connect(self.surface1, QtCore.SIGNAL('clear_data'), self.clear_data)       
 
         self.counter = 0
         self.fps = 0. 
         self.lastupdate = time.time()
+
+        #initial values##
+        self.x = []; self.y = []; self.data = []
+        self.newx = []; self.newy = []; self.newbg = []
+        self.xlow = 400; self.ylow = 100
+        self.xhigh = 400+1280; self.yhigh = 100+960
+        self.start_pos = []
+        self.current_pos = []
         
         #### Start  #####################
         self.setMouseTracking(True)
+        self.pp = QtGui.QCursor()
+        self.start = time.time()
         self.home.raise_()
+        self.home.close()
         self._update()
 
 
@@ -469,7 +528,7 @@ class Display(QtGui.QWidget):
         self.surface1.set_cmap(3)
 
     def open_about(self):
-        about = AboutScreen()
+        about = AboutScreen(self)
         about.move(1920/2,1080/2)
         about.raise_()
 
@@ -492,16 +551,12 @@ class Display(QtGui.QWidget):
     def mouseMoveEvent(self, e):
         #constrain the mouse cursor?
         pos = e.pos()
+        print pos, 'cursor position'
         if pos.x() > 1920:
             print 'WUBDOW'
-            cursor = self.getCursor()
-            cursor.setPos((1920,pos.y()))
+            self.pp.setPos(1920,pos.y())
 
 #will need to be rescaled
-        if self.pressed:
-            self.moved = True
-            pos= e.pos()
-            self.current_pos = [(pos.x()+x0)/(xscale),(pos.y()-y0)/yscale]
 
     def setMouseTracking(self, flag):
         def recursive_set(parent):
@@ -515,66 +570,43 @@ class Display(QtGui.QWidget):
         recursive_set(self)
             
 
-    #TODO - redefine the click positions once things are placed    
-    def mousePressEvent(self, QMouseEvent):
-        if QMouseEvent.button() == QtCore.Qt.LeftButton:
-                #make points transparent
-                if self.pressed:
-                    pos= QMouseEvent.pos()
-                    if pos.x() >= self.xlow and pos.x() <= self.xhigh and pos.y() >= self.ylow and pos.y() <= self.yhigh:
-                        #handle inside the plot boundaries
-                        self.end_pos = [(pos.x()-self.xlow)/(xscale),(pos.y()-self.ylow)/yscale]
-                    elif pos.x() >= self.xlow and pos.x() <= self.xhigh and pos.y() < self.ylow:
-                        #within x but lower than y
-                        self.end_pos = [(pos.x()-self.xlow)/(xscale),0.]
-                    elif pos.x() >= self.xlow and pos.x() <= self.xhigh and pos.y() > self.yhigh:
-                        #within x but higher than y
-                        self.end_pos = [(pos.x()-self.xlow)/(xscale),1.]
-                    elif pos.y() >= self.ylow and pos.y() <= self.yhigh and pos.x() < self.xlow:
-                        #within y but lower than x
-                        self.end_pos = [0.,(pos.y()-self.ylow)/yscale]
-                    elif pos.y() >= self.ylow and pos.y() <= self.yhigh and pos.x() > self.xhigh:
-                        #within y but higher than x
-                        self.end_pos = [1.,(pos.y()-self.ylow)/yscale]
-                    elif pos.x() < self.xlow and pos.y() < self.ylow:
-                        #less than both
-                        self.end_pos = [0.,0.]
-                    else:
-                        #greater than both
-                        self.end_pos = [1.,1.]
-
-                    self.gravity_thread.read_input([self.start_pos[0],self.start_pos[1],self.end_pos[0],self.end_pos[1]],args.vel_scaling)
-                    self.mainbox.setCursor(QtCore.Qt.WaitCursor)
-                    self._update_pos([],[])
-                    x_scaled = self.newx* YWIDTH - 7
-                    self.x =  np.log( np.zeros(len(x_scaled))-1)
-                    self.y = np.copy(self.x)
-                    self.newx = []; self.newy = []
-                    self.counter = -1
-                    self.start = time.time()
-                    self.mainbox.setCursor(QtCore.Qt.CrossCursor)
-                    self.pressed = False; self.moved=False
-                    self.tracex = []
-                    self.tracey = []
-                    global TRACE_LENGTH
-                    TRACE_LENGTH = 0
-                   
-                else:
-                    pos = QMouseEvent.pos()
-                    if pos.x() >= self.xlow and pos.x() <= self.xhigh and pos.y() >= self.ylow and pos.y() <= self.yhigh:
-                        #inside the plot boundaries
-                        self.pressed = True
-                        self.start_pos = [(pos.x() - self.xlow)/(xscale),(pos.y()-self.ylow)/yscale]
-                        self.current_pos = [self.start_pos[0],self.start_pos[1]]
-                        self.mainbox.setCursor(QtCore.Qt.CrossCursor)
-                        self.tracex = []
-                        self.tracey = []
-                        global TRACE_LENGTH
-                        TRACE_LENGTH = 0
-                     
     def new_MouseClickEvent(self, e):
         if e.button() == QtCore.Qt.RightButton:
             e.accept()
+
+    def start_computation(self, arr):
+        self.start_pos = arr[0]; self.end_pos = arr[1]
+        self.gravity_thread.read_input([self.start_pos[0],self.start_pos[1],self.end_pos[0],self.end_pos[1]],args.vel_scaling)
+        self.mainbox.setCursor(QtCore.Qt.WaitCursor)
+        self.surface1._update_pos([],[])
+        self.surface2._update_pos([],[])
+        x_scaled = self.newx* YWIDTH - 7
+        self.x =  np.log( np.zeros(len(x_scaled))-1)
+        self.y = np.copy(self.x)
+        self.newx = []; self.newy = []
+        self.counter = -1
+        self.start = time.time()
+        self.mainbox.setCursor(QtCore.Qt.CrossCursor)
+        self.pressed = False; self.moved=False
+        self.tracex = []
+        self.tracey = []
+        global TRACE_LENGTH
+        TRACE_LENGTH = 0
+
+    def clear_data(self):
+        self.surface1._update_pos([0],[0])
+        self.surface2._update_pos([0],[0])
+        self.tracex = []
+        self.tracey = []
+        self.x = []
+        self.y = []
+        global TRACE_LENGTH
+        TRACE_LENGTH = 0
+        self.pressed = True
+
+        #self.surface1.close()
+        #self.surface1 = Surface(self)
+        #self.surface1.move(400,100)
 
 
     def stage_data(self, data):
@@ -584,13 +616,21 @@ class Display(QtGui.QWidget):
 
     def _update(self):
         if self.counter >= 0:
+
           
-          self.surface1._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
-          self.surface2._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
-          
-          if self.pressed and self.moved:
+          #print self.pp.pos().x()
+          #print self.y; self.x
+          if not self.pressed:
+            self.surface1._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
+            self.surface2._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
+
+          if self.pressed:
+            #print self.pp.pos()
+            self.current_pos = [(self.pp.pos().x()-x0)/float(1241.), (self.pp.pos().y()-y0)/float(879.)]
+            print self.current_pos, self.start_pos
+
             self.surface1._update_pos([YWIDTH-self.start_pos[0]*YWIDTH,YWIDTH-self.current_pos[0]*YWIDTH],[self.start_pos[1]*XWIDTH,self.current_pos[1]*XWIDTH],color='r')
-            self.surface2._update_pos([YWIDTH-self.start_pos[0]*YWIDTH,YWIDTH-self.current_pos[0]*YWIDTH],[self.start_pos[1]*XWIDTH,self.current_pos[1]*XWIDTH],color='r')
+            self.surface2._update_pos([580*2-self.start_pos[0]*580*2,580-self.current_pos[0]*580],[self.start_pos[1]*410,self.current_pos[1]*410],color='r')
 
           QtCore.QTimer.singleShot(6.5, self._update)
           self.counter += 1

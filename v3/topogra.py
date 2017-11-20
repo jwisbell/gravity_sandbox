@@ -30,38 +30,44 @@ def error(params, points):
     return result
 
 """Read in the AR Sandbox Calibration File"""
-def ar_calibration(fname='./aux/BoxLayout.txt')
+def ar_calibration(fname='./aux/BoxLayout.txt'):
     f = open(fname,'r')
     lines = f.readlines()
     plane = lines[0].split('(')[1].split(')')[0].split(',')
     plane = np.array(plane,dtype=float)
-    factor = 730./float(lines[0].split(')')[1])
+    factor = 730./float(lines[0].split(')')[1].split(',')[1])
     vertices = []
-    for k in range(1,len(lines)):
+    for k in range(1,len(lines)-1):
         l = lines[k]
-        d = l.strip('(')
-        d = d.strip(')')
-        data = d.split(',')
-        x = float(data[0])
-        y = float(data[1])
-        z = float(data[2])*factor
-        vertices.append((x,y,z))
+        if len(l)>1:
+            print l.strip('(')
+            d = l.strip('(')
+            d = d.strip(')')[:-2]
+            data = d.strip().split(',')
+            print data[0], 'here'
+            x = float(data[0])
+            y = float(data[1])
+            z = float(data[2])*factor
+            vertices.append((x,y,z))
     f.close()
 
     #return the vertices of the 'good' boundary
 
-    a = plane[0]
-    b = plane[1]
-    c = plane[2]*factor
-    Z = a*X + b*Y + c
-
+    a = plane[0]#factor
+    b = plane[1]#*factor
+    c = 730.
+    #Z = a*X + b*Y + c
+    print vertices[0][0]
 
     print 'PLANAR_PARAMS =  [%f, %f, %f]'%(a,b,c)
-    print 'BOUNDARIES = [%f,%f],[%f,%f]'%(vertices[0,0],vertices[0,1],vertices[2,0],vertices[1,1])
-    shp = np.zeros( (640,480) )
-    bounds = [vertices[0,0],vertices[2,0], vertices[0,1],vertices[1,1]]
+    print 'BOUNDARIES = [%f,%f],[%f,%f]'%(vertices[0][0],vertices[1][1],vertices[2][0],vertices[2][1])
+    shp = np.zeros( (480,640) )
+    bounds = [vertices[1][0],vertices[0][0],vertices[2][1],vertices[1][1]]
+    bounds = [40,-30,30,-30]
+    print bounds
+    print shp[bounds[0]:bounds[1], bounds[2]:bounds[3]].shape
 
-    return generate_baseplane(params,shp[bounds[0]:bounds[1], bounds[2]:bounds[4]]), bounds
+    return generate_baseplane((a,b,c),shp[bounds[0]:bounds[1], bounds[2]:bounds[3]].shape), bounds
 
 
 
@@ -105,9 +111,12 @@ def calibrate(surface,baseplane,bounds):
     """Do calibration here - scaling, setting zero point, removing dead pixels, and trimming edges(?)."""
     
     surface = surface.astype('float32')
+    #print surface
+    #print surface.shape
+    #print baseplane.shape, 'baseplane'
     #need to remove planar slope
-    surface = surface[bounds[0]:bounds[1], bounds[2]:bounds[4]] - baseplane
-    BAD_PIX = np.where(surface>=200)
+    surface = surface[bounds[0]:bounds[1], bounds[2]:bounds[3]] - baseplane
+    BAD_PIX = []#np.where(surface>=200)
     surface *= .1#SCALE_FACTOR
     #scale
     x =  np.power(np.e,np.absolute(surface))
@@ -121,7 +130,7 @@ def calibrate(surface,baseplane,bounds):
 
 def generate_baseplane(params,shape=(580,410)):
     """Run on startup to get quick baseplane for calibration using PLANE_PARAMS"""
-    X,Y = np.meshgrid(np.arange(0,shape[0]), np.arange(0,shape[1]))
+    X,Y = np.meshgrid(np.arange(0,shape[1]), np.arange(0,shape[0]))
     XX = X.flatten()
     YY = Y.flatten()
     Z = params[0]*X + params[1]*Y + params[2]
@@ -132,6 +141,7 @@ def update_surface(baseplane,bounds,prev=None,FLOOR=-710,verbose=False):
     """Read updated topography and calibrate for use"""
     (depth,_)= get_depth()
     topo,pix = calibrate(depth,baseplane,bounds)
+    #print topo, 'wtf'
     if verbose:
         print 'SURFACE STATS'
         print np.mean(topo), np.max(topo),np.min(topo), np.median(topo)
@@ -152,9 +162,12 @@ if __name__ == "__main__":
     from sys import argv
     script, fname = argv
     import matplotlib.pyplot as plt
-    init_calib(fname)
+    '''init_calib(fname)
     baseplane = generate_baseplane()
-    test = update_surface(baseplane,None)
+    test = update_surface(baseplane,None)'''
+
+    baseplane, bounds = ar_calibration()
+    test = update_surface(baseplane,bounds,None)
     fig = plt.figure()
     plt.imshow(test)
     plt.show()
