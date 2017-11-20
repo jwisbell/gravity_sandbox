@@ -10,6 +10,9 @@ PLANE_PARAMS = [0.01,-0.001, 730.]#[0.006452, -0.032609, 712.261579]
 SCALE_FACTOR = 1./50
 
 
+#TODO use BoxLayout.txt? Primary issue is unit scaling 730 -> -96.5
+
+
 def plane(x, y, params):
     a = params[0]
     b = params[1]
@@ -25,6 +28,27 @@ def error(params, points):
         diff = abs(plane_z - z)
         result += diff**2
     return result
+
+"""Read in the AR Sandbox Calibration File"""
+def ar_calibration(fname='BoxLayout.txt')
+    f = open(fname,'r')
+    lines = f.readlines()
+    plane = lines[0].split('(')[1].split(')')[0].split(',')
+    plane = np.array(plane,dtype=float)
+    factor = 730./float(lines[0].split(')')[1])
+    vertices = []
+    for k in range(1,len(lines)):
+        l = lines[k]
+        d = l.strip('(')
+        d = d.strip(')')
+        data = d.split(',')
+        vertices.append([float(data[0]), float(data[1]), float(data[2])*factor])
+    vertices = np.array(vertices)
+    f.close()
+
+    #make the baseplane
+
+
 
 """Given a *.npy file of a saved topography (ideally a flat surface), find the parameters of the 
 plane to remove for normalization. Put results in PLANE_PARAMS"""

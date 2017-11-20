@@ -55,9 +55,60 @@ x, y, bg = load_data()
 
 
 #cmap_jet = np.load('./aux/jet_cmap.npy')
-cmap_jet = np.load('./aux/cmap_cont.npy')
-cmap_viridis = np.load('./aux/jet_cmap.npy')#np.load('./aux/viridis_cmap.npy')
+cmap_jet = np.load('./aux/jet_cmap.npy')
+cmap_viridis = np.load('./aux/viridis_cmap.npy')
+cmap_sauron = np.load('./aux/cmap_sauron.npy')
 
+class AboutScreen(QtGui.QWidget):
+     def __init__(self, parent=None):
+        super(AboutScreen,self).__init__(parent)
+        #### Create Gui Elements ###########
+        self.mainbox = QtGui.QWidget()
+        #self.setCentralWidget(self.mainbox)
+        self.setLayout(QtGui.QGridLayout())
+
+        self.setGeometry(1920/2.,1080/2.,500,500)
+
+        self.bck = QtGui.QLabel()
+        self.bck.setPixmap(QtGui.QPixmap('./aux/starfield.png'))
+        self.bck.setGeometry(0,0,500,500)
+
+        self.aboutText = QtGui.QLabel()
+        self.aboutText.setText('GravBox is the interface application for the Augmented Reality (AR) Sandbox for gravitational dynamics simulations designed and built\nby Dr. Hai Fu\'s Introduction to Astrophysics class during the 2016-2017 academic year and beyond.\nGravBox itself was designed by Zachary Luppen, Erin Maier, and Mason Reed.\n\nAR Sandbox is the result of an NSF-funded project on informal science education for freshwater lake and watershed science developed by the\nUC Davis\' W.M. Keck Center for Active Visualization in the Earth Sciences (KeckCAVES),\ntogether with the UC Davis Tahoe Environmental Research Center, Lawrence Hall of Science, and ECHO Lake Aquarium and Science Center.')
+        self.aboutText.move(0,30)
+
+        self.exit_button = QtGui.QPushButton('Close', self)
+        self.exit_button.clicked.connect(self.exit_about)
+        self.exit_button.move(0,50)
+
+    def exit_about():
+        self.close()
+
+class WelcomeScreen(QtGui.QWidget):
+     def __init__(self, parent=None):
+        super(WelcomeScreen,self).__init__(parent)
+        #### Create Gui Elements ###########
+        self.mainbox = QtGui.QWidget()
+        #self.setCentralWidget(self.mainbox)
+        self.setLayout(QtGui.QGridLayout())
+
+        self.setGeometry(0,0,1920,1080)
+
+        self.bck = QtGui.QLabel()
+        self.bck.setPixmap(QtGui.QPixmap('./aux/starfield.png')) #change to welcome screen
+        self.bck.setGeometry(0,0,1920,1080)
+
+        self.aboutText = QtGui.QLabel()
+        self.aboutText.setText('')
+        self.aboutText.move(0,30)
+
+        self.exit_button = QtGui.QPushButton('Start Your Journey', self)
+        self.exit_button.clicked.connect(self.exit)
+        self.exit_button.move(0,50)
+
+    def exit():
+        #self.close()
+        self.lower()
 
 class GravityThread(QtCore.QThread):
     def __init__(self):
@@ -173,21 +224,13 @@ class GravityThread(QtCore.QThread):
         mag = np.sqrt(d_x**2 + d_y**2) * vel_scaling
         vel = np.array([np.sin(ang)*mag, np.cos(ang)*mag])
         print pos, vel, 'pos and vel'
-        '''c = 50
-        if vel[0] > c:
-            vel[0] = c  
-        if vel[0] < -c:
-            vel[0] = -c
-        if vel[1] > c:
-            vel[1] = c
-        if vel[1] < -c:
-            vel[1] = -c'''
+    
         self.in_pos = pos
         self.in_vel = vel
 
 class Surface(QtGui.QWidget):
     def __init__(self, parent=None):
-        super(Display,self).__init__(parent)
+        super(Surface,self).__init__(parent)
         #### Create Gui Elements ###########
         self.mainbox = QtGui.QWidget()
         #self.setCentralWidget(self.mainbox)
@@ -204,27 +247,36 @@ class Surface(QtGui.QWidget):
         self.view.setMouseEnabled(x=False,y=False)
         self.view.setBackgroundColor((.5,.5,.5,1.))
 
-        self.setGeometry(0,0, 1920+1280, 1080) # JUST IN CASE, CTRL-ALT-ESC    
+        self.setGeometry(0,0, 1280, 960) # JUST IN CASE, CTRL-ALT-ESC    
         self.canvas.nextRow()
 
         #r = cmap_viridis
-        self.lutval = 2
         r = cmap_jet
         pos = np.linspace(1.9,-.9,len(r)-1)
         pos= np.append(pos, np.array([np.nan]))
         self.cmap = pg.ColorMap(pos, r)
         self.lut = self.cmap.getLookupTable(-5.25,1.9,256)#(-.009,1.05, 256)
+
         r2 = cmap_viridis
         pos2 = np.linspace(1.9,-.9,len(r2)-1)
         pos2= np.append(pos2, np.array([np.nan]))
         self.cmap2 = pg.ColorMap(pos2, r2)
         self.lut2 = self.cmap2.getLookupTable(-5.25,1.9,256)
 
+        r4 = cmap_sauron
+        pos4 = np.linspace(1.9,-.9,len(r2)-1)
+        pos4= np.append(pos4, np.array([np.nan]))
+        self.cmap4 = pg.ColorMap(pos4, r4)
+        self.lut4 = self.cmap4.getLookupTable(-5.25,1.9,256)
+
+        #black
         r3 = np.array([[0,0,0,256],[0,0,0,256],[0,0,0,256]])
         pos3 = np.linspace(1.9,-.9,len(r3)-1)
         pos3= np.append(pos3, np.array([np.nan]))
         self.cmap3 = pg.ColorMap(pos3, r3)
         self.lut3 = self.cmap3.getLookupTable(-5.25,1.9,256)
+
+        self.luts = [self.lut, self.lut2, self.lut4, self.lut3]
 
         #### Set Data  #####################
         self.start = time.time()
@@ -238,14 +290,14 @@ class Surface(QtGui.QWidget):
         self.newbg = np.copy(self.data)
         self.img = pg.ImageItem(border=None)
         self.img.setZValue(-100)
-        self.img.setLookupTable(self.lut2)
+        self.img.setLookupTable(self.lut)
         self.img.setImage(self.data)
         self.current_conts = []
         self.pdi_list = []
         n_colors = 5
         grad = np.linspace(64,255,n_colors)
         for x in grad:
-            self.pdi_list.append(pg.PlotDataItem([], [], pen={'color':(255,255,255,x),'width':3}))
+            self.pdi_list.append(pg.PlotDataItem([], [], pen={'color':(230, 0, 230,x),'width':3})) #
         
         self.view.addItem(self.img)
         for v in self.pdi_list:
@@ -294,6 +346,8 @@ class Surface(QtGui.QWidget):
         if args.cont_on:
             self.mk_contours_thread.update_bg(bg)
 
+    def set_cmap(self, imap):
+        self.img.setLookupTable(self.luts[imap])
 
 
 class Display(QtGui.QWidget):
@@ -305,6 +359,7 @@ class Display(QtGui.QWidget):
         self.setLayout(QtGui.QGridLayout())
         self.setCursor(QtCore.Qt.CrossCursor)
         self.setMouseTracking(True)
+        self.setGeometry(0,0,1920+1280,1080)
 
         ###LAYOUT THE DSIPLAY ###
         self.bck=QtGui.QLabel(self)
@@ -313,6 +368,16 @@ class Display(QtGui.QWidget):
         self.bck.setScaledContents(True)
         self.bck.setMinimumSize(1,1)
         self.bck.move(0,0)
+
+        ### HELPER WIDGETS ####
+        self.home = WelcomeScreen()
+        self.home.move(0,0)
+
+        ### PLOTTING WIDGET(S) ####
+        self.surface1 = Surface()
+        self.surface2 = Surface()#surface1
+        self.surface1.move(100,100)
+        self.surface2.move(100+1280,100)
     
 
         #### BUTTONS ######
@@ -324,7 +389,9 @@ class Display(QtGui.QWidget):
         self.cmap_button = QtGui.QPushButton('ColorMap', self)
         self.menu = QtGui.QMenu()
         #self.menu.addAction('Contours',self.set_cont)
-        self.menu.addAction('No Contours', self.set_nocont)
+        self.menu.addAction('Default', self.set_nocont)
+        self.menu.addAction('Sauron', self.set_saruon)
+        self.menu.addAction('Viridis', self.set_viridis)
         self.menu.addAction('Black', self.set_black)
         self.cmap_button.setMenu(self.menu)
         #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
@@ -338,7 +405,7 @@ class Display(QtGui.QWidget):
 
         self.about_button = QtGui.QPushButton('About', self)
         #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
-        self.about_button.clicked.connect(self.handleButton)
+        self.about_button.clicked.connect(self.open_about)
         self.about_button.move(70,360)
 
         self.sarndbox_button = QtGui.QPushButton('SARndbox', self)
@@ -346,14 +413,13 @@ class Display(QtGui.QWidget):
         self.sarndbox_button.clicked.connect(self.start_sarndbox)
         self.sarndbox_button.move(70,720)
 
-        aboutText = QtGui.QLabel()
-        aboutText.setText('GravBox is the interface application for the Augmented Reality (AR) Sandbox for gravitational dynamics simulations designed and built\nby Dr. Hai Fu\'s Introduction to Astrophysics class during the 2016-2017 academic year and beyond.\nGravBox itself was designed by Zachary Luppen, Erin Maier, and Mason Reed.\n\nAR Sandbox is the result of an NSF-funded project on informal science education for freshwater lake and watershed science developed by the\nUC Davis\' W.M. Keck Center for Active Visualization in the Earth Sciences (KeckCAVES),\ntogether with the UC Davis Tahoe Environmental Research Center, Lawrence Hall of Science, and ECHO Lake Aquarium and Science Center.')
-        aboutText.move(0,30)
+        #aboutText = QtGui.QLabel()
+        
 
         self.pressed=False; self.moved=False  
 
         """
-        Adjust margins to better align the Kinect data with the projected image.
+        Adjust margins to align stuff.
         Order is left, top, right, bottom. 
         """ 
         self.leftmargin = 240 ; self.topmargin = 20; self.rightmargin =240; self.bottommargin = 20
@@ -361,7 +427,6 @@ class Display(QtGui.QWidget):
 
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.FramelessWindowHint)
         self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
-        
         
         
         #start the computation thread
@@ -376,6 +441,7 @@ class Display(QtGui.QWidget):
         
         #### Start  #####################
         self.setMouseTracking(True)
+        self.home.raise_()
         self._update()
 
 
@@ -394,15 +460,18 @@ class Display(QtGui.QWidget):
             self.lutval = 1
 
     def set_black(self):
-        self.img.setLookupTable(self.lut3)
+        self.surface1.set_cmap(2)
     def set_nocont(self):
-        self.img.setLookupTable(self.lut2)
-    def set_cont(self):
-        self.img.setLookupTable(self.lut)
+        self.surface1.set_cmap(0)
+    def set_sauron(self):
+        self.surface1.set_cmap(1)
+    def set_viridis(self):
+        self.surface1.set_cmap(3)
 
-    '''def open_about(self):
+    def open_about(self):
         about = AboutScreen()
-        about.move(1920/2,1080/2)'''
+        about.move(1920/2,1080/2)
+        about.raise_()
 
         
     def start_sarndbox(self):
@@ -421,15 +490,17 @@ class Display(QtGui.QWidget):
 
 
     def mouseMoveEvent(self, e):
-        #print 'here'
-        #constrain the mouse cursor
+        #constrain the mouse cursor?
         pos = e.pos()
-        if pos.x() < XWINDOW:
-            print pos.x(), pos.y(), XWINDOW, 'WUBDOW'
+        if pos.x() > 1920:
+            print 'WUBDOW'
+            cursor = self.getCursor()
+            cursor.setPos((1920,pos.y()))
+
+#will need to be rescaled
         if self.pressed:
             self.moved = True
             pos= e.pos()
-            print [pos.x(),pos.y()]
             self.current_pos = [(pos.x()+x0)/(xscale),(pos.y()-y0)/yscale]
 
     def setMouseTracking(self, flag):
@@ -443,18 +514,37 @@ class Display(QtGui.QWidget):
         QtGui.QWidget.setMouseTracking(self, flag)
         recursive_set(self)
             
+
+    #TODO - redefine the click positions once things are placed    
     def mousePressEvent(self, QMouseEvent):
         if QMouseEvent.button() == QtCore.Qt.LeftButton:
                 #make points transparent
                 if self.pressed:
                     pos= QMouseEvent.pos()
-                    self.end_pos = [(pos.x()+45)/(xscale),(pos.y()-15)/yscale]#[(pos.x()-self.leftmargin)/XWINDOW,(pos.y()-self.topmargin)/YWINDOW]
-                    print self.end_pos, 'end pos'
+                    if pos.x() >= self.xlow and pos.x() <= self.xhigh and pos.y() >= self.ylow and pos.y() <= self.yhigh:
+                        #handle inside the plot boundaries
+                        self.end_pos = [(pos.x()-self.xlow)/(xscale),(pos.y()-self.ylow)/yscale]
+                    elif pos.x() >= self.xlow and pos.x() <= self.xhigh and pos.y() < self.ylow:
+                        #within x but lower than y
+                        self.end_pos = [(pos.x()-self.xlow)/(xscale),0.]
+                    elif pos.x() >= self.xlow and pos.x() <= self.xhigh and pos.y() > self.yhigh:
+                        #within x but higher than y
+                        self.end_pos = [(pos.x()-self.xlow)/(xscale),1.]
+                    elif pos.y() >= self.ylow and pos.y() <= self.yhigh and pos.x() < self.xlow:
+                        #within y but lower than x
+                        self.end_pos = [0.,(pos.y()-self.ylow)/yscale]
+                    elif pos.y() >= self.ylow and pos.y() <= self.yhigh and pos.x() > self.xhigh:
+                        #within y but higher than x
+                        self.end_pos = [1.,(pos.y()-self.ylow)/yscale]
+                    elif pos.x() < self.xlow and pos.y() < self.ylow:
+                        #less than both
+                        self.end_pos = [0.,0.]
+                    else:
+                        #greater than both
+                        self.end_pos = [1.,1.]
 
-                
                     self.gravity_thread.read_input([self.start_pos[0],self.start_pos[1],self.end_pos[0],self.end_pos[1]],args.vel_scaling)
                     self.mainbox.setCursor(QtCore.Qt.WaitCursor)
-
                     self._update_pos([],[])
                     x_scaled = self.newx* YWIDTH - 7
                     self.x =  np.log( np.zeros(len(x_scaled))-1)
@@ -462,25 +552,25 @@ class Display(QtGui.QWidget):
                     self.newx = []; self.newy = []
                     self.counter = -1
                     self.start = time.time()
-                    
                     self.mainbox.setCursor(QtCore.Qt.CrossCursor)
                     self.pressed = False; self.moved=False
                     self.tracex = []
                     self.tracey = []
                     global TRACE_LENGTH
                     TRACE_LENGTH = 0
+                   
                 else:
                     pos = QMouseEvent.pos()
-                    self.pressed = True
-                    self.start_pos = [(pos.x())/(xscale),(pos.y())/yscale]#[(pos.x()-self.leftmargin)/XWINDOW,(pos.y()-self.topmargin)/YWINDOW]
-                    print self.start_pos, 'start'
-                    self.current_pos = [self.start_pos[0],self.start_pos[1]]
-                    self.mainbox.setCursor(QtCore.Qt.CrossCursor)
-                    self.tracex = []
-                    self.tracey = []
-                    global TRACE_LENGTH
-                    TRACE_LENGTH = 0
-
+                    if pos.x() >= self.xlow and pos.x() <= self.xhigh and pos.y() >= self.ylow and pos.y() <= self.yhigh:
+                        #inside the plot boundaries
+                        self.pressed = True
+                        self.start_pos = [(pos.x() - self.xlow)/(xscale),(pos.y()-self.ylow)/yscale]
+                        self.current_pos = [self.start_pos[0],self.start_pos[1]]
+                        self.mainbox.setCursor(QtCore.Qt.CrossCursor)
+                        self.tracex = []
+                        self.tracey = []
+                        global TRACE_LENGTH
+                        TRACE_LENGTH = 0
                      
     def new_MouseClickEvent(self, e):
         if e.button() == QtCore.Qt.RightButton:
@@ -492,14 +582,15 @@ class Display(QtGui.QWidget):
             self.counter = 0
         self.newx, self.newy, self.newbg, self.calc_idle = data
 
-
     def _update(self):
         if self.counter >= 0:
           
-          self._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
+          self.surface1._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
+          self.surface2._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
           
           if self.pressed and self.moved:
-            self._update_pos([YWIDTH-self.start_pos[0]*YWIDTH,YWIDTH-self.current_pos[0]*YWIDTH],[self.start_pos[1]*XWIDTH,self.current_pos[1]*XWIDTH],color='r')
+            self.surface1._update_pos([YWIDTH-self.start_pos[0]*YWIDTH,YWIDTH-self.current_pos[0]*YWIDTH],[self.start_pos[1]*XWIDTH,self.current_pos[1]*XWIDTH],color='r')
+            self.surface2._update_pos([YWIDTH-self.start_pos[0]*YWIDTH,YWIDTH-self.current_pos[0]*YWIDTH],[self.start_pos[1]*XWIDTH,self.current_pos[1]*XWIDTH],color='r')
 
           QtCore.QTimer.singleShot(6.5, self._update)
           self.counter += 1
@@ -513,13 +604,13 @@ class Display(QtGui.QWidget):
             print x_scaled[0], y_scaled[0]
             print 'updating'
           if self.counter == len(self.newx)-20:
-            bg = self.newbg / scaling #np.load('display_dem.npy')#
+            bg = self.newbg / scaling
             bg[0,0] = 600
             bg[0,1] = -5
             self.data = np.rot90(bg,1)
-            self._update_bg(bg)
+            self.surface1._update_bg(bg)
+            self.surface2._update_bg(bg)
             
-
           if self.counter >= len(self.newx):
             if TRACE_BOOL == False:
                 self.tracex = []
