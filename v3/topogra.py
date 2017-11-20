@@ -30,7 +30,7 @@ def error(params, points):
     return result
 
 """Read in the AR Sandbox Calibration File"""
-def ar_calibration(fname='BoxLayout.txt')
+def ar_calibration(fname='./aux/BoxLayout.txt')
     f = open(fname,'r')
     lines = f.readlines()
     plane = lines[0].split('(')[1].split(')')[0].split(',')
@@ -42,11 +42,28 @@ def ar_calibration(fname='BoxLayout.txt')
         d = l.strip('(')
         d = d.strip(')')
         data = d.split(',')
-        vertices.append([float(data[0]), float(data[1]), float(data[2])*factor])
-    vertices = np.array(vertices)
+        x = float(data[0])
+        y = float(data[1])
+        z = float(data[2])*factor
+        vertices.append((x,y,z))
     f.close()
 
-    #make the baseplane
+    #return the vertices of the 'good' boundary
+
+    a = plane[0]
+    b = plane[1]
+    c = plane[2]*factor
+    Z = a*X + b*Y + c
+
+
+    print 'PLANAR_PARAMS =  [%f, %f, %f]'%(a,b,c)
+    print 'BOUNDARIES = [%f,%f],[%f,%f]'%(vertices[0,0],vertices[0,1],vertices[2,0],vertices[1,1])
+    shp = np.zeros( (640,480) )
+    bounds = [vertices[0,0],vertices[2,0], vertices[0,1],vertices[1,1]]
+
+    return generate_baseplane(params,shp[bounds[0]:bounds[1], bounds[2]:bounds[4]]), bounds
+
+
 
 
 
@@ -84,12 +101,12 @@ def init_calib(fname=None, data=None):
     print 'PLANAR_PARAMS =  [%f, %f, %f]'%(a,b,c)
 
 
-def calibrate(surface, baseplane):
+def calibrate(surface,baseplane,bounds):
     """Do calibration here - scaling, setting zero point, removing dead pixels, and trimming edges(?)."""
     
     surface = surface.astype('float32')
     #need to remove planar slope
-    surface = surface[40:-30, 30:-30] - baseplane
+    surface = surface[bounds[0]:bounds[1], bounds[2]:bounds[4]] - baseplane
     BAD_PIX = np.where(surface>=200)
     surface *= .1#SCALE_FACTOR
     #scale
@@ -102,19 +119,19 @@ def calibrate(surface, baseplane):
 
     return np.nan_to_num(surface), BAD_PIX
 
-def generate_baseplane(shape=(580,410)):
+def generate_baseplane(params,shape=(580,410)):
     """Run on startup to get quick baseplane for calibration using PLANE_PARAMS"""
     X,Y = np.meshgrid(np.arange(0,shape[0]), np.arange(0,shape[1]))
     XX = X.flatten()
     YY = Y.flatten()
-    Z = PLANE_PARAMS[0]*X + PLANE_PARAMS[1]*Y + PLANE_PARAMS[2]
+    Z = params[0]*X + params[1]*Y + params[2]
     return Z
 
 
-def update_surface(baseplane,prev=None,FLOOR=-710,verbose=False):
+def update_surface(baseplane,bounds,prev=None,FLOOR=-710,verbose=False):
     """Read updated topography and calibrate for use"""
     (depth,_)= get_depth()
-    topo,pix = calibrate(depth,baseplane)
+    topo,pix = calibrate(depth,baseplane,bounds)
     if verbose:
         print 'SURFACE STATS'
         print np.mean(topo), np.max(topo),np.min(topo), np.median(topo)

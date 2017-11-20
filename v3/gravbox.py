@@ -119,9 +119,9 @@ class GravityThread(QtCore.QThread):
         self.previous_vel = np.copy(self.current_vel)
         self.in_pos = np.copy(self.previous_pos)
         self.in_vel = np.copy(self.previous_vel)
-        self.baseplane = topo.generate_baseplane()
+        self.baseplane,self.bounds = topo.ar_calibrate()#topo.generate_baseplane()
         #self.prev_dem = np.load('display_dem.npy')
-        self.prev_dem = topo.update_surface(self.baseplane, None)
+        self.prev_dem = topo.update_surface(self.baseplane,self.bounds, None)
         self.idle = True
     def __del__(self):
         self.wait()
@@ -143,7 +143,7 @@ class GravityThread(QtCore.QThread):
                 # Load in surface
                 start_loop = time.time()
                 #scaled_dem_array = np.load('display_dem.npy')
-                scaled_dem_array = topo.update_surface(self.baseplane, self.prev_dem, verbose=True) 
+                scaled_dem_array = topo.update_surface(self.baseplane,self.bounds, self.prev_dem, verbose=True) 
                 self.prev_dem = scaled_dem_array
                 #scaled_dem_array = scaled_dem_array[40:-30, 30:-30] 
                 xw = scaled_dem_array.shape[1]; yw = scaled_dem_array.shape[0]
@@ -200,7 +200,7 @@ class GravityThread(QtCore.QThread):
                     self.idle = False
                     last_idle = time.time()
                     continue
-                scaled_dem_array = topo.update_surface(self.baseplane, self.prev_dem,verbose=True)
+                scaled_dem_array = topo.update_surface(self.baseplane, self.bounds,self.prev_dem,verbose=True)
                 #scaled_dem_array = scaled_dem_array[40:-30, 30:-30] 
                 #scaled_dem_array = np.load('display_dem.npy') 
                 self.prev_dem = scaled_dem_array
