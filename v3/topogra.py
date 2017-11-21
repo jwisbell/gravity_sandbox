@@ -168,6 +168,11 @@ if __name__ == "__main__":
 
     baseplane, bounds = ar_calibration()
     test = update_surface(baseplane,bounds,None)
+
+    stretch_vals = np.ones(test.shape[0])
+    stretch_vals[:test.shape[0]/8] = 2
+    test = np.repeat(test,stretch_vals.astype(int), axis=0)
+
     fig = plt.figure()
     plt.imshow(test)
     plt.show()
