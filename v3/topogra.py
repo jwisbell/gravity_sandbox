@@ -137,7 +137,7 @@ def generate_baseplane(params,shape=(580,410)):
     return Z
 
 
-def update_surface(baseplane,bounds,prev=None,FLOOR=-710,verbose=False):
+def update_surface(baseplane,bounds,prev=None,FLOOR=-600,verbose=False):
     """Read updated topography and calibrate for use"""
     (depth,_)= get_depth()
     topo,pix = calibrate(depth,baseplane,bounds)
@@ -147,11 +147,11 @@ def update_surface(baseplane,bounds,prev=None,FLOOR=-710,verbose=False):
         print np.mean(topo), np.max(topo),np.min(topo), np.median(topo)
     #if there are enough pixels above a threshold, ignore and show previous topo
     #this is useful when hands are in the sandbox
-    if len(np.where(topo<FLOOR)[0]) + len(np.where(topo<FLOOR)[1]) > 10:
+    if len(np.where(topo<FLOOR)[0]) + len(np.where(topo<FLOOR)[1]) > 20:
         if prev == None:
             return topo #- np.nanmedian(topo)
         else:
-            return topo
+            return prev
     return topo #- np.nanmedian(topo)
 
 

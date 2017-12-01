@@ -11,6 +11,7 @@ import gravity_algorithm
 import convolution
 import topogra as topo
 from argparse import ArgumentParser
+import mk_kernels
 
 
 start = time.time()
@@ -145,6 +146,10 @@ class GravityThread(QtCore.QThread):
         self.in_pos = np.copy(self.previous_pos)
         self.in_vel = np.copy(self.previous_vel)
         self.baseplane,self.bounds = topo.ar_calibration()#topo.generate_baseplane()
+        #update the kernel size for calibration settings
+        print 'baseplane shape', self.baseplane.shape
+        if args.calibrate == True: 
+            mk_kernels.make(self.baseplane.shape[0],self.baseplane.shape[1])
         #self.prev_dem = np.load('display_dem.npy')
         self.prev_dem = topo.update_surface(self.baseplane,self.bounds, None)
         self.idle = True
@@ -213,7 +218,7 @@ class GravityThread(QtCore.QThread):
                 self.current_vel = [particle.vel[0], particle.vel[1]]
                 
 
-                time.sleep(.87 + (.0002*TRACE_LENGTH) - (time.time() - start_loop))
+                time.sleep(.89 + (.00025*TRACE_LENGTH) - (time.time() - start_loop))
                 dt = time.time()-start_loop
                 print 'LOOP TOOK: ', dt
                 if time.time() - last_idle >= args.idle_time:
@@ -247,7 +252,7 @@ class GravityThread(QtCore.QThread):
         ang = np.arctan2(d_y,d_x)
         mag = np.sqrt(d_x**2 + d_y**2) * vel_scaling
         vel = np.array([np.sin(ang)*mag, np.cos(ang)*mag])
-        print pos, vel, 'pos and vel'
+        #print pos, vel, 'pos and vel'
     
         self.in_pos = pos
         self.in_vel = vel
@@ -278,19 +283,19 @@ class Surface(QtGui.QWidget):
         pos = np.linspace(1.9,-.9,len(r)-1)
         pos= np.append(pos, np.array([np.nan]))
         self.cmap = pg.ColorMap(pos, r)
-        self.lut = self.cmap.getLookupTable(-5.25,1.9,256)#(-.009,1.05, 256)
+        self.lut = self.cmap.getLookupTable(-4.25,1.9,256)#(-.009,1.05, 256)
 
         r2 = cmap_viridis
-        pos2 = np.linspace(1.4,-.3,len(r2)-1)
+        pos2 = np.linspace(1.4,-.7,len(r2)-1)
         pos2= np.append(pos2, np.array([np.nan]))
         self.cmap2 = pg.ColorMap(pos2, r2)
-        self.lut2 = self.cmap2.getLookupTable(-10,1.2,256)
+        self.lut2 = self.cmap2.getLookupTable(-5,1.4,256)
 
         r4 = cmap_sauron
-        pos4 = np.linspace(-.3,.8,len(r4)-1)
+        pos4 = np.linspace(.8,-.3,len(r4)-1)
         pos4= np.append(pos4, np.array([np.nan]))
         self.cmap4 = pg.ColorMap(pos4, r4)
-        self.lut4 = self.cmap4.getLookupTable(-9.25,.8,256)
+        self.lut4 = self.cmap4.getLookupTable(-6.25,.8,256)
 
         #black
         r3 = np.array([[0,0,0,256],[0,0,0,256],[0,0,0,256]])
@@ -320,7 +325,7 @@ class Surface(QtGui.QWidget):
         n_colors = 5
         grad = np.linspace(64,255,n_colors)
         for x in grad:
-            self.pdi_list.append(pg.PlotDataItem([], [], pen={'color':(230, 0, 230,x),'width':3})) #
+            self.pdi_list.append(pg.PlotDataItem([], [], pen={'color':(255, 255, 255,x),'width':3})) #pen={'color':(230, 0, 230,x)
         
         self.view.addItem(self.img)
         for v in self.pdi_list:
@@ -398,7 +403,7 @@ class Surface(QtGui.QWidget):
     def mouseMoveEvent(self, e):
         #constrain the mouse cursor?
         pos = e.pos()
-        print pos, 'cursor position, child'
+        #print pos, 'cursor position, child'
 
         if self.pressed:
             self.moved = True
@@ -415,7 +420,7 @@ class Surface(QtGui.QWidget):
                 self.parent().pressed = True
                 self.start_pos = [pos.x()/1280., pos.y()/960.]
                 self.parent().start_pos = self.start_pos
-                print pos.x(), pos.y(), 'click click mfer'
+                #print pos.x(), pos.y(), 'click click mfer'
                 self.emit(QtCore.SIGNAL('clear data'))
 
             elif self.pressed:
@@ -521,7 +526,7 @@ class Settings(QtGui.QWidget):
         for i in range(len(self.boxes)):
             b = self.boxes[i]
             t = b.text().toFloat()
-            print t
+            #print t
             self.params[i] = t[0]
 
         self.parent().lmargin,self.parent().rmargin,self.parent().tmargin,self.parent().bmargin,self.parent().xstart,self.parent().ystart,self.parent().xspan,self.parent().yspan = self.params
@@ -556,7 +561,7 @@ class Display(QtGui.QWidget):
         self.about.move(1920/2. -250,1080/2.-250)
 
         ### PLOTTING WIDGET(S) ####
-        self.lmargin = 0; self.rmargin = 20; self.tmargin = -10; self.bmargin = 40;
+        self.lmargin = 0; self.rmargin = 30; self.tmargin = -5; self.bmargin = 40;
         self.xstart = -40; self.ystart = -20; self.xspan = 1280; self.yspan = 860
         self.surface1 = Surface(self, aspectLock=False)#, lmargin=self.lmargin,rmargin=self.rmargin, tmargin=self.tmargin, bmargin=self.bmargin, xstart=self.xstart,ystart=self.ystart,xspan=self.xspan,yspan=self.yspan)#Surface(self)
         self.surface2 = Surface(self, aspectLock=False, lmargin=self.lmargin,rmargin=self.rmargin, tmargin=self.tmargin, bmargin=self.bmargin, xstart=self.xstart,ystart=self.ystart,xspan=self.xspan,yspan=self.yspan)#surface1
@@ -685,7 +690,8 @@ class Display(QtGui.QWidget):
         
     def start_sarndbox(self):
         print 'call whatever starts the sarndbox'
-        call('/home/gravbox/src/SARndbox-2.3/bin/SARndbox -uhm -fpv -rs 0.0&', shell=True)
+        #call('/home/gravbox/src/SARndbox-2.3/bin/SARndbox -uhm -fpv -rs 0.0&', shell=True)
+        sys.exit(2)
 
     def start_trace(self):
         global TRACE_BOOL
@@ -701,9 +707,7 @@ class Display(QtGui.QWidget):
     def mouseMoveEvent(self, e):
         #constrain the mouse cursor?
         pos = e.pos()
-        print pos, 'cursor position'
         if pos.x() > 1920:
-            print 'WUBDOW'
             self.pp.setPos(1920,pos.y())
 
 #will need to be rescaled
@@ -763,6 +767,7 @@ class Display(QtGui.QWidget):
         if len(self.newx) <1:
             self.counter = 0
         self.newx, self.newy, self.newbg, self.calc_idle = data
+        #self.newy = self.newy+1
 
     def _update(self):
         if self.counter >= 0:
@@ -784,7 +789,7 @@ class Display(QtGui.QWidget):
           if self.pressed:
             #print self.pp.pos()
             self.current_pos = [(self.pp.pos().x()-x0)/float(1241.), (self.pp.pos().y()-y0)/float(879.)]
-            print self.current_pos, self.start_pos
+            #print self.current_pos, self.start_pos
 
             self.surface1._update_pos([YWIDTH-self.start_pos[0]*YWIDTH,YWIDTH-self.current_pos[0]*YWIDTH],[self.start_pos[1]*XWIDTH,self.current_pos[1]*XWIDTH],color='r')
             self.surface2._update_pos([580*2-self.start_pos[0]*580*2,580-self.current_pos[0]*580],[self.start_pos[1]*410,self.current_pos[1]*410],color='r')
@@ -798,7 +803,7 @@ class Display(QtGui.QWidget):
             y_scaled = YWIDTH- (self.newy * XWIDTH) #- 12
             self.x = np.append(self.x, x_scaled)
             self.y = np.append(self.y, y_scaled)
-            print x_scaled[0], y_scaled[0]
+            #print x_scaled[0], y_scaled[0]
             print 'updating'
           if self.counter == len(self.newx)-20:
             bg = self.newbg / scaling
@@ -847,5 +852,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     app = QtGui.QApplication(sys.argv)
     thisapp = Display()
-    thisapp.show()
+    thisapp.show()#showFullScreen()
     sys.exit(app.exec_())
