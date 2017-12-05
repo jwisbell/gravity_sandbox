@@ -32,6 +32,7 @@ Y_KERNEL = np.load('./aux/dy_dft.npy') #fits.getdata('./aux/dy_kernel.fits',0) #
 
 TRACE_BOOL = False
 TRACE_LENGTH = 0
+CONTOURS_ON = True
 
 
 def load_data():
@@ -56,7 +57,7 @@ x, y, bg = load_data()
 
 
 #cmap_jet = np.load('./aux/jet_cmap.npy')
-cmap_jet = np.load('./aux/jet_cmap.npy')
+cmap_jet = np.load('./aux/cmap_cont.npy')#np.load('./aux/jet_cmap.npy')
 cmap_viridis = np.load('./aux/viridis_cmap.npy')
 cmap_sauron = np.load('./aux/cmap_sauron.npy')
 
@@ -211,7 +212,9 @@ class GravityThread(QtCore.QThread):
                     x = x[::15]
                     y = y[::15]
                 #print 'has it even gotten here?', x
-                #sys.exit() 
+                #sys.exit()
+                if CONTOURS_ON:
+                    scaled_dem_array = self.make_contours(scaled_dem_array) 
                 self.emit(QtCore.SIGNAL('stage_data'),[x, y, np.nan_to_num(scaled_dem_array)+2,self.idle])
 
                 self.current_pos = [particle.pos[0], particle.pos[1]] 
@@ -233,6 +236,8 @@ class GravityThread(QtCore.QThread):
                 #scaled_dem_array = scaled_dem_array[40:-30, 30:-30] 
                 #scaled_dem_array = np.load('display_dem.npy') 
                 self.prev_dem = scaled_dem_array
+                if CONTOURS_ON:
+                    scaled_dem_array = self.make_contours(scaled_dem_array)
                 x = np.zeros(100)
                 y = np.zeros(100)
                 #np.save('../circles.npy',scaled_dem_array)
@@ -257,6 +262,21 @@ class GravityThread(QtCore.QThread):
         self.in_pos = pos
         self.in_vel = vel
 
+    def make_contours(self, im, num_contours=7):
+        contour_levels = np.linspace(np.min(im)*.7, np.max(im)*.7,num_contours)
+        contour_levels = np.append(contour_levels, np.median(im))
+
+        for v in contour_levels:
+            c = measure.find_contours(im, v)
+            for n, contour in enumerate(c):
+                contour = np.nan_to_num(contour).astype(int)
+                im[contour[:,0], contour[:,1]] = 15#-600
+
+        return im
+
+
+
+
 class Surface(QtGui.QWidget):
     def __init__(self, parent=None, aspectLock=True, lmargin=0,rmargin=0, tmargin=20, bmargin=20, xstart=0,ystart=0,xspan=1280,yspan=960):
         super(Surface,self).__init__(parent)
@@ -279,11 +299,11 @@ class Surface(QtGui.QWidget):
         self.setContentsMargins(lmargin,tmargin,rmargin,bmargin)
 
         #r = cmap_viridis
-        r = cmap_jet
-        pos = np.linspace(1.9,-.9,len(r)-1)
-        pos= np.append(pos, np.array([np.nan]))
+        r = cmap_jet[::-1]
+        pos = np.linspace(.325,-.125,len(r)-1)
+        pos= np.append(pos, np.array([-1]))
         self.cmap = pg.ColorMap(pos, r)
-        self.lut = self.cmap.getLookupTable(-4.25,1.9,256)#(-.009,1.05, 256)
+        self.lut = self.cmap.getLookupTable(.1,-1.8,512)#(-.009,1.05, 256)
 
         r2 = cmap_viridis
         pos2 = np.linspace(1.4,-.7,len(r2)-1)
@@ -371,8 +391,8 @@ class Surface(QtGui.QWidget):
                 v.setData(x[i*num_vals:(i+1)*num_vals], y[i*num_vals:(i+1)*num_vals])
         
     def _update_bg(self, bg, stretch=False):
-        bg[0,0] = 600
-        bg[0,1] = -5
+        bg[0,0] = -600
+        bg[0,1] = 15
         self.data = np.rot90(bg,1)
 
         if stretch:
@@ -387,6 +407,7 @@ class Surface(QtGui.QWidget):
             self.data = np.repeat(self.data,stretch_vals.astype(int), axis=1)
 
         self.img.setImage(self.data)
+        print self.cmap.map(15), 'will this work? I need it black'
         '''if lutval != self.lutval:
             self.lutval = lutval
             if self.lutval == 1:
