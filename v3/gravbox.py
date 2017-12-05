@@ -57,8 +57,8 @@ x, y, bg = load_data()
 
 
 #cmap_jet = np.load('./aux/jet_cmap.npy')
-cmap_jet = np.load('./aux/cmap_cont.npy')#np.load('./aux/jet_cmap.npy')
-cmap_viridis = np.load('./aux/viridis_cmap.npy')
+cmap_jet = np.load('./aux/cmap_jet.npy')#np.load('./aux/jet_cmap.npy')
+cmap_viridis = np.load('./aux/cmap_viridis.npy')
 cmap_sauron = np.load('./aux/cmap_sauron.npy')
 
 class AboutScreen(QtGui.QWidget):
@@ -86,9 +86,44 @@ class AboutScreen(QtGui.QWidget):
         self.exit_button.clicked.connect(self.exit_about)
         self.exit_button.move(210,400)
         self.setAutoFillBackground(True)
+        #set the font
+
 
      def exit_about(self):
         self.lower()
+
+
+class UIowaScreen(QtGui.QWidget):
+     def __init__(self, parent=None):
+        super(AboutScreen,self).__init__(parent)
+        #### Create Gui Elements ###########
+        self.mainbox = QtGui.QWidget()
+        #self.setCentralWidget(self.mainbox)
+        self.setLayout(QtGui.QGridLayout())
+
+        self.setGeometry(0,0,500,500)
+
+        '''self.bck = QtGui.QLabel(self)
+        self.bck.setPixmap(QtGui.QPixmap('./aux/starfield.png'))
+        self.bck.setGeometry(0,0,500,500)
+        self.bck.move(0,0)'''
+
+        self.aboutText = QtGui.QLabel(self)
+        self.rawtext = "INFO ABOUT UIOWA"
+        self.aboutText.setText(self.rawtext)
+        self.aboutText.move(0,30)
+        self.aboutText.setGeometry(50,30,400,400)
+
+        self.exit_button = QtGui.QPushButton('Close', self)
+        self.exit_button.clicked.connect(self.exit_about)
+        self.exit_button.move(210,400)
+        self.setAutoFillBackground(True)
+        #set the font
+
+
+     def exit_about(self):
+        self.lower()
+
 
 class WelcomeScreen(QtGui.QWidget):
     def __init__(self, parent=None):
@@ -102,7 +137,7 @@ class WelcomeScreen(QtGui.QWidget):
 
         ###LAYOUT THE DSIPLAY ###
         self.bck=QtGui.QLabel(self)
-        self.bck.setPixmap(QtGui.QPixmap('./aux/welcome.png'))
+        self.bck.setPixmap(QtGui.QPixmap('./aux/welcome.png')) #get higher resolution image
         self.bck.setGeometry(0,0,1920,1080)
         self.bck.setScaledContents(True)
         self.bck.setMinimumSize(1,1)
@@ -213,9 +248,10 @@ class GravityThread(QtCore.QThread):
                     y = y[::15]
                 #print 'has it even gotten here?', x
                 #sys.exit()
+                scaled_dem_array = self.normalize_bg(scaled_dem_array)
                 if CONTOURS_ON:
                     scaled_dem_array = self.make_contours(scaled_dem_array) 
-                self.emit(QtCore.SIGNAL('stage_data'),[x, y, np.nan_to_num(scaled_dem_array)+2,self.idle])
+                self.emit(QtCore.SIGNAL('stage_data'),[x, y, scaled_dem_array,self.idle])
 
                 self.current_pos = [particle.pos[0], particle.pos[1]] 
                 self.current_vel = [particle.vel[0], particle.vel[1]]
@@ -236,6 +272,8 @@ class GravityThread(QtCore.QThread):
                 #scaled_dem_array = scaled_dem_array[40:-30, 30:-30] 
                 #scaled_dem_array = np.load('display_dem.npy') 
                 self.prev_dem = scaled_dem_array
+                scaled_dem_array = self.normalize_bg(scaled_dem_array)
+
                 if CONTOURS_ON:
                     scaled_dem_array = self.make_contours(scaled_dem_array)
                 x = np.zeros(100)
@@ -244,7 +282,7 @@ class GravityThread(QtCore.QThread):
                 #x,y = self.loading_circle()
                 #bck = np.zeros((410,610))
                 #bck[:,30:] = scaled_dem_array
-                self.emit(QtCore.SIGNAL('stage_data'),[x/scaled_dem_array.shape[1], y/scaled_dem_array.shape[0], np.nan_to_num(scaled_dem_array)+2, self.idle])
+                self.emit(QtCore.SIGNAL('stage_data'),[x/scaled_dem_array.shape[1], y/scaled_dem_array.shape[0], scaled_dem_array, self.idle])
                 #add an idle message! or plot a loading circle...?
                 time.sleep(1)
 
@@ -262,6 +300,14 @@ class GravityThread(QtCore.QThread):
         self.in_pos = pos
         self.in_vel = vel
 
+    def normalize_bg(self, bg):
+        #force range of values
+        bg[0,0] = -600
+        bg[0,1] = 15
+
+        bg = (bg + 600) / 615. #normalize and make [0,1]
+        return np.nan_to_num(bg)
+
     def make_contours(self, im, num_contours=7):
         contour_levels = np.linspace(np.min(im)*.7, np.max(im)*.7,num_contours)
         contour_levels = np.append(contour_levels, np.median(im))
@@ -270,7 +316,7 @@ class GravityThread(QtCore.QThread):
             c = measure.find_contours(im, v)
             for n, contour in enumerate(c):
                 contour = np.nan_to_num(contour).astype(int)
-                im[contour[:,0], contour[:,1]] = 15#-600
+                im[contour[:,0], contour[:,1]] = -1#-600
 
         return im
 
@@ -278,7 +324,7 @@ class GravityThread(QtCore.QThread):
 
 
 class Surface(QtGui.QWidget):
-    def __init__(self, parent=None, aspectLock=True, lmargin=0,rmargin=0, tmargin=20, bmargin=20, xstart=0,ystart=0,xspan=1280,yspan=960):
+    def __init__(self, parent=None, aspectLock=True, lmargin=0,rmargin=0, tmargin=20, bmargin=20, xstart=0,ystart=0,xspan=1440,yspan=1080):
         super(Surface,self).__init__(parent)
         #### Create Gui Elements ###########
         self.mainbox = QtGui.QWidget()
@@ -300,22 +346,34 @@ class Surface(QtGui.QWidget):
 
         #r = cmap_viridis
         r = cmap_jet[::-1]
-        pos = np.linspace(.325,-.125,len(r)-1)
+        pos = np.linspace(0,1,len(r)-1)
         pos= np.append(pos, np.array([-1]))
         self.cmap = pg.ColorMap(pos, r)
-        self.lut = self.cmap.getLookupTable(.1,-1.8,512)#(-.009,1.05, 256)
+        self.lut = self.cmap.getLookupTable()#.1,-1.8,512)#(-.009,1.05, 256)
 
         r2 = cmap_viridis
-        pos2 = np.linspace(1.4,-.7,len(r2)-1)
-        pos2= np.append(pos2, np.array([np.nan]))
+        pos2 = np.linspace(0,1,len(r2)-1)
+        pos2= np.append(pos2, np.array([-1]))
+        #pos2 = np.linspace(1.4,-.7,len(r2)-1)
+        #pos2= np.append(pos2, np.array([np.nan]))
         self.cmap2 = pg.ColorMap(pos2, r2)
-        self.lut2 = self.cmap2.getLookupTable(-5,1.4,256)
+        self.lut2 = self.cmap2.getLookupTable()#-5,1.4,256)
 
         r4 = cmap_sauron
-        pos4 = np.linspace(.8,-.3,len(r4)-1)
-        pos4= np.append(pos4, np.array([np.nan]))
+        pos4 = np.linspace(0,1,len(r4)-1)
+        pos4= np.append(pos4, np.array([-1]))
+        #pos4 = np.linspace(.8,-.3,len(r4)-1)
+        #pos4= np.append(pos4, np.array([np.nan]))
         self.cmap4 = pg.ColorMap(pos4, r4)
-        self.lut4 = self.cmap4.getLookupTable(-6.25,.8,256)
+        self.lut4 = self.cmap4.getLookupTable()#-6.25,.8,256)
+
+        #same as sarndbox
+        r5 = cmap_geo
+        pos5 = np.array([-40,-30,-20,-12.5,-.75,-.25,-.05,0,.05,.25,.75,12.5,20,30,40]+40)/80.
+        pos5 = np.append(pos5,np.array([-1]))
+        self.cmap5 = pg.ColorMap(pos5,r5)
+        self.lut5 = self.cmap5.getLookupTable()
+
 
         #black
         r3 = np.array([[0,0,0,256],[0,0,0,256],[0,0,0,256]])
@@ -324,7 +382,7 @@ class Surface(QtGui.QWidget):
         self.cmap3 = pg.ColorMap(pos3, r3)
         self.lut3 = self.cmap3.getLookupTable(-5.25,1.9,256)
 
-        self.luts = [self.lut, self.lut2, self.lut4, self.lut3]
+        self.luts = [self.lut, self.lut2, self.lut4, self.lut3,self.lut5]
 
         #### Set Data  #####################
         self.start = time.time()
@@ -391,8 +449,8 @@ class Surface(QtGui.QWidget):
                 v.setData(x[i*num_vals:(i+1)*num_vals], y[i*num_vals:(i+1)*num_vals])
         
     def _update_bg(self, bg, stretch=False):
-        bg[0,0] = -600
-        bg[0,1] = 15
+        #bg[0,0] = -600
+        #bg[0,1] = 15
         self.data = np.rot90(bg,1)
 
         if stretch:
@@ -605,6 +663,7 @@ class Display(QtGui.QWidget):
         self.menu.addAction('Default', self.set_nocont)
         self.menu.addAction('Sauron', self.set_sauron)
         self.menu.addAction('Viridis', self.set_viridis)
+        self.menu.addAction('Geology', self.set_geo)
         self.menu.addAction('Black', self.set_black)
         self.cmap_button.setMenu(self.menu)
         #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
@@ -625,6 +684,8 @@ class Display(QtGui.QWidget):
         #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
         self.sarndbox_button.clicked.connect(self.start_sarndbox)
         self.sarndbox_button.move(70,720)
+
+        #set the fonts of the buttons!
 
         #aboutText = QtGui.QLabel()
 
@@ -704,6 +765,10 @@ class Display(QtGui.QWidget):
     def set_viridis(self):
         self.surface1.set_cmap(1)
         self.surface2.set_cmap(1)
+    def set_geo(self):
+        self.surface1.set_cmap(4)
+        self.surface2.set_cmap(4)
+
 
     def open_about(self):
         self.about.raise_()
