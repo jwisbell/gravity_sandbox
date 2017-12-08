@@ -19,8 +19,8 @@ end = time.time()
 scaling = 40 * 10
 YWIDTH = 580.#480.
 XWIDTH = 410.#600#640.
-y0 = 60.+40#-10#/2.
-x0 = 320+18#15#2.
+y0 = 0#60.+40#-10#/2.
+x0 = 186+18#15#2.
 XWINDOW = 640.*2   
 YWINDOW = 512.*2 
 #xscale = 600.*2.055 ; yscale = 495.*2.045
@@ -60,6 +60,7 @@ x, y, bg = load_data()
 cmap_jet = np.load('./aux/cmap_jet.npy')#np.load('./aux/jet_cmap.npy')
 cmap_viridis = np.load('./aux/cmap_viridis.npy')
 cmap_sauron = np.load('./aux/cmap_sauron.npy')
+cmap_geo = np.load('./aux/cmap_geo.npy')
 
 class AboutScreen(QtGui.QWidget):
      def __init__(self, parent=None):
@@ -95,7 +96,7 @@ class AboutScreen(QtGui.QWidget):
 
 class UIowaScreen(QtGui.QWidget):
      def __init__(self, parent=None):
-        super(AboutScreen,self).__init__(parent)
+        super(UIowaScreen,self).__init__(parent)
         #### Create Gui Elements ###########
         self.mainbox = QtGui.QWidget()
         #self.setCentralWidget(self.mainbox)
@@ -168,6 +169,7 @@ class WelcomeScreen(QtGui.QWidget):
 
             if pos.x() > self.ixl and pos.x() < self.ixh and pos.y() > self.iyl and pos.y() < self.iyh:
                 #inside the UIowa boundaries
+                self.parent().uiowa.raise_()
                 self.lower()
         
                 
@@ -309,14 +311,14 @@ class GravityThread(QtCore.QThread):
         return np.nan_to_num(bg)
 
     def make_contours(self, im, num_contours=7):
-        contour_levels = np.linspace(np.min(im)*.7, np.max(im)*.7,num_contours)
+        contour_levels = np.linspace(np.min(im)*.7, np.max(im)*.9,num_contours)
         contour_levels = np.append(contour_levels, np.median(im))
 
         for v in contour_levels:
             c = measure.find_contours(im, v)
             for n, contour in enumerate(c):
                 contour = np.nan_to_num(contour).astype(int)
-                im[contour[:,0], contour[:,1]] = -1#-600
+                im[contour[:,0], contour[:,1]] = -.5 #-600
 
         return im
 
@@ -324,7 +326,7 @@ class GravityThread(QtCore.QThread):
 
 
 class Surface(QtGui.QWidget):
-    def __init__(self, parent=None, aspectLock=True, lmargin=0,rmargin=0, tmargin=20, bmargin=20, xstart=0,ystart=0,xspan=1440,yspan=1080):
+    def __init__(self, parent=None, aspectLock=True, lmargin=0,rmargin=0, tmargin=20, bmargin=20, xstart=0,ystart=0,xspan=1160*4/3.,yspan=1160):
         super(Surface,self).__init__(parent)
         #### Create Gui Elements ###########
         self.mainbox = QtGui.QWidget()
@@ -339,6 +341,7 @@ class Surface(QtGui.QWidget):
         self.view.setRange(xRange=[0,580],yRange=[0,410],padding=-1)
         self.view.setMouseEnabled(x=False,y=False)
         self.view.setBackgroundColor((.5,.5,.5,1.))
+        self.xsize = float(xspan); self.ysize = float(yspan)
 
         self.setGeometry(0+xstart,0+ystart, xspan, yspan) # JUST IN CASE, CTRL-ALT-ESC    
         self.canvas.nextRow()
@@ -346,33 +349,37 @@ class Surface(QtGui.QWidget):
 
         #r = cmap_viridis
         r = cmap_jet[::-1]
-        pos = np.linspace(0,1,len(r)-1)
-        pos= np.append(pos, np.array([-1]))
+        pos = np.linspace(0.,1.5,len(r)-1)
+        pos= np.append(pos, np.array([-.00125]))
         self.cmap = pg.ColorMap(pos, r)
-        self.lut = self.cmap.getLookupTable()#.1,-1.8,512)#(-.009,1.05, 256)
+        self.lut = self.cmap.getLookupTable(-.001,1.6,512)#.1,-1.8,512)#(-.009,1.05, 256)
+        self.lutc = self.cmap.getLookupTable(0.1,1.72,512)
 
-        r2 = cmap_viridis
-        pos2 = np.linspace(0,1,len(r2)-1)
+        r2 = cmap_viridis[::-1]
+        pos2 = np.linspace(-0.005,.9,len(r2)-1)
         pos2= np.append(pos2, np.array([-1]))
         #pos2 = np.linspace(1.4,-.7,len(r2)-1)
         #pos2= np.append(pos2, np.array([np.nan]))
         self.cmap2 = pg.ColorMap(pos2, r2)
-        self.lut2 = self.cmap2.getLookupTable()#-5,1.4,256)
+        self.lut2 = self.cmap2.getLookupTable(0,.85,512)#-5,1.4,256)
+        self.lut2c = self.cmap2.getLookupTable(0.1,.95,512)
 
-        r4 = cmap_sauron
-        pos4 = np.linspace(0,1,len(r4)-1)
+        r4 = cmap_sauron#[::-1]
+        pos4 = np.linspace(0.2,.95,len(r4)-1)#np.array([0.]+[.05*np.power(2,k) for k in range(len(r4)-2)])/2.+.3 #np.linspace(0.2,.95,len(r4)-1)
         pos4= np.append(pos4, np.array([-1]))
         #pos4 = np.linspace(.8,-.3,len(r4)-1)
         #pos4= np.append(pos4, np.array([np.nan]))
         self.cmap4 = pg.ColorMap(pos4, r4)
-        self.lut4 = self.cmap4.getLookupTable()#-6.25,.8,256)
+        self.lut4 = self.cmap4.getLookupTable(0,.95)#.0,2,512)#-6.25,.8,256)
+        self.lut4c = self.cmap4.getLookupTable(0.2,.95)
 
         #same as sarndbox
-        r5 = cmap_geo
-        pos5 = np.array([-40,-30,-20,-12.5,-.75,-.25,-.05,0,.05,.25,.75,12.5,20,30,40]+40)/80.
+        r5 = cmap_geo[::-1]
+        pos5 = np.linspace(.0,1.08,len(r5)-1)+.15#(np.array([-40,-30,-20,-12.5,-.75,-.25,-.05,0,.05,.25,.75,12.5,20,30,40])+40) /80.
         pos5 = np.append(pos5,np.array([-1]))
         self.cmap5 = pg.ColorMap(pos5,r5)
         self.lut5 = self.cmap5.getLookupTable()
+        self.lut5c = self.cmap5.getLookupTable(.1,1.1)
 
 
         #black
@@ -383,6 +390,8 @@ class Surface(QtGui.QWidget):
         self.lut3 = self.cmap3.getLookupTable(-5.25,1.9,256)
 
         self.luts = [self.lut, self.lut2, self.lut4, self.lut3,self.lut5]
+        self.luts_base = [self.lutc, self.lut2c, self.lut4c, self.lut3,self.lut5c]
+        self.imap = 0
 
         #### Set Data  #####################
         self.start = time.time()
@@ -465,7 +474,6 @@ class Surface(QtGui.QWidget):
             self.data = np.repeat(self.data,stretch_vals.astype(int), axis=1)
 
         self.img.setImage(self.data)
-        print self.cmap.map(15), 'will this work? I need it black'
         '''if lutval != self.lutval:
             self.lutval = lutval
             if self.lutval == 1:
@@ -477,17 +485,21 @@ class Surface(QtGui.QWidget):
             self.mk_contours_thread.update_bg(bg)
 
     def set_cmap(self, imap):
-        self.img.setLookupTable(self.luts[imap])
+        self.imap = imap
+        if CONTOURS_ON:
+            self.img.setLookupTable(self.luts[imap])
+        else:
+            self.img.setLookupTable(self.luts_base[imap])
 
     def mouseMoveEvent(self, e):
         #constrain the mouse cursor?
         pos = e.pos()
-        #print pos, 'cursor position, child'
+        print pos, 'cursor position, child'
 
         if self.pressed:
             self.moved = True
             pos= e.pos()
-            self.current_pos = [(pos.x())/(1280.),(pos.y())/960.]
+            self.current_pos = [(pos.x())/(self.xsize),(pos.y())/self.ysize]
 
 
     def mousePressEvent(self, QMouseEvent):
@@ -497,14 +509,15 @@ class Surface(QtGui.QWidget):
             if not self.pressed:
                 self.pressed =True
                 self.parent().pressed = True
-                self.start_pos = [pos.x()/1280., pos.y()/960.]
+                #print pos.x(), pos.y()
+                self.start_pos = [(pos.x()-22)/1500., (pos.y()-10)/1140.]
                 self.parent().start_pos = self.start_pos
-                #print pos.x(), pos.y(), 'click click mfer'
+                print pos.x(), pos.y(), 'click click mfer'
                 self.emit(QtCore.SIGNAL('clear data'))
 
             elif self.pressed:
                 self.pressed=False
-                self.end_pos = [pos.x()/1280., pos.y()/960.]
+                self.end_pos = [(pos.x()-22)/1500., (pos.y()-10)/1140.]
                 self.emit(QtCore.SIGNAL('clear data'),self.start_pos)
                 #send a signal to parent with start and end positions
                 self.emit(QtCore.SIGNAL('start_computation'), [self.start_pos, self.end_pos])
@@ -638,13 +651,15 @@ class Display(QtGui.QWidget):
         self.home.move(0,0)
         self.about = AboutScreen(self)
         self.about.move(1920/2. -250,1080/2.-250)
+        self.uiowa = UIowaScreen(self)
+        self.uiowa.move(1920/2. -250,1080/2.-250)
 
         ### PLOTTING WIDGET(S) ####
         self.lmargin = 0; self.rmargin = 30; self.tmargin = -5; self.bmargin = 40;
         self.xstart = -40; self.ystart = -20; self.xspan = 1280; self.yspan = 860
         self.surface1 = Surface(self, aspectLock=False)#, lmargin=self.lmargin,rmargin=self.rmargin, tmargin=self.tmargin, bmargin=self.bmargin, xstart=self.xstart,ystart=self.ystart,xspan=self.xspan,yspan=self.yspan)#Surface(self)
         self.surface2 = Surface(self, aspectLock=False, lmargin=self.lmargin,rmargin=self.rmargin, tmargin=self.tmargin, bmargin=self.bmargin, xstart=self.xstart,ystart=self.ystart,xspan=self.xspan,yspan=self.yspan)#surface1
-        self.surface1.move(320,60)
+        self.surface1.move(186,-42)
         self.surface1.raise_()
         self.surface2.move(1920-30,-20)
         self.surface2.lower()
@@ -684,6 +699,19 @@ class Display(QtGui.QWidget):
         #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
         self.sarndbox_button.clicked.connect(self.start_sarndbox)
         self.sarndbox_button.move(70,720)
+
+        
+
+        self.templbl = QtGui.QLabel(self)
+        self.templbl.setAutoFillBackground(True)
+        self.templbl.setGeometry(0,0,80,30)
+        self.templbl.move(1280+480,225)
+
+        self.contour_toggle = QtGui.QCheckBox('Contours', self)
+        self.contour_toggle.setChecked(True)
+        self.contour_toggle.stateChanged.connect(self.toggle_conts)
+        self.contour_toggle.move(1280+480, 230)
+
 
         #set the fonts of the buttons!
 
@@ -768,6 +796,11 @@ class Display(QtGui.QWidget):
     def set_geo(self):
         self.surface1.set_cmap(4)
         self.surface2.set_cmap(4)
+    def toggle_conts(self):
+        val = self.contour_toggle.isChecked()
+        global CONTOURS_ON
+        CONTOURS_ON = val
+        self.surface1.set_cmap(self.surface1.imap)
 
 
     def open_about(self):
@@ -873,8 +906,9 @@ class Display(QtGui.QWidget):
             self.surface2._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
 
           if self.pressed:
-            #print self.pp.pos()
-            self.current_pos = [(self.pp.pos().x()-x0)/float(1241.), (self.pp.pos().y()-y0)/float(879.)]
+            #print self.pp.pos(), 'this'
+            self.current_pos = [(self.pp.pos().x()-206)/float(1508.), (self.pp.pos().y())/float(1080.)]
+            
             #print self.current_pos, self.start_pos
 
             self.surface1._update_pos([YWIDTH-self.start_pos[0]*YWIDTH,YWIDTH-self.current_pos[0]*YWIDTH],[self.start_pos[1]*XWIDTH,self.current_pos[1]*XWIDTH],color='r')
@@ -893,8 +927,339 @@ class Display(QtGui.QWidget):
             print 'updating'
           if self.counter == len(self.newx)-20:
             bg = self.newbg / scaling
-            bg[0,0] = 600
-            bg[0,1] = -5
+            #bg[0,0] = 600
+            #bg[0,1] = -5
+            self.data = np.rot90(bg,1)
+            self.surface1._update_bg(bg)
+            self.surface2._update_bg(bg,stretch=True)
+            
+          if self.counter >= len(self.newx):
+            if TRACE_BOOL == False:
+                self.tracex = []
+                self.tracey = []
+                global TRACE_LENGTH
+                TRACE_LENGTH = 0
+            try:
+                print time.time() - self.start,  'ANIMATING TOOK'
+                time.sleep(.9 - (time.time() - self.start))
+                self.counter = 0
+                self.x = self.x[100:]
+                self.y = self.y[100:]
+                self.start = time.time()
+            except:
+                self.counter = 0
+                print time.time() - self.start,  'ANIMATING TOOK'
+                self.x = self.x[100:]
+                self.y = self.y[100:]
+                self.start = time.time()
+        else:
+            QtCore.QTimer.singleShot(1, self._update) 
+
+
+
+class Display2(QtGui.QWidget):
+    def __init__(self, parent=None):
+        super(Display2,self).__init__(parent)
+        #### Create Gui Elements ###########
+        self.mainbox = QtGui.QWidget()
+        #self.setCentralWidget(self.mainbox)
+        self.setLayout(QtGui.QGridLayout())
+        self.setCursor(QtCore.Qt.CrossCursor)
+        self.setMouseTracking(True)
+        self.setGeometry(0,0,1920+1280,1080)
+        self.setFocus()
+
+        ###LAYOUT THE DSIPLAY ###
+        self.bck=QtGui.QLabel(self)
+        self.bck.setPixmap(QtGui.QPixmap('./aux/starfield.png'))
+        self.bck.setGeometry(0,0,1920,1080)
+        self.bck.setScaledContents(True)
+        self.bck.setMinimumSize(1,1)
+        self.bck.move(0,0)
+
+        ### HELPER WIDGETS ####
+        self.home = WelcomeScreen(self)
+        self.home.move(0,0)
+        self.about = AboutScreen(self)
+        self.about.move(1920/2. -250,1080/2.-250)
+        self.uiowa = UIowaScreen(self)
+        self.uiowa.move(1920/2. -250,1080/2.-250)
+
+        ### PLOTTING WIDGET(S) ####
+        self.lmargin = 0; self.rmargin = 30; self.tmargin = -5; self.bmargin = 40;
+        self.xstart = -40; self.ystart = -20; self.xspan = 1280; self.yspan = 860
+        self.surface1 = Surface(self, aspectLock=False)#, lmargin=self.lmargin,rmargin=self.rmargin, tmargin=self.tmargin, bmargin=self.bmargin, xstart=self.xstart,ystart=self.ystart,xspan=self.xspan,yspan=self.yspan)#Surface(self)
+        self.surface2 = Surface(self, aspectLock=False, lmargin=self.lmargin,rmargin=self.rmargin, tmargin=self.tmargin, bmargin=self.bmargin, xstart=self.xstart,ystart=self.ystart,xspan=self.xspan,yspan=self.yspan)#surface1
+        self.surface1.move(390,-42)
+        self.surface1.raise_()
+        self.surface2.move(1920-30,-20)
+        self.surface2.lower()
+        self.need_new =False
+
+
+        #### BUTTONS ######
+        self.trail_button = QtGui.QPushButton('Trail', self)
+        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
+        self.trail_button.clicked.connect(self.start_trace)
+        self.trail_button.move(140,360)
+
+        self.cmap_button = QtGui.QPushButton('ColorMap', self)
+        self.menu = QtGui.QMenu()
+        #self.menu.addAction('Contours',self.set_cont)
+        self.menu.addAction('Default', self.set_nocont)
+        self.menu.addAction('Sauron', self.set_sauron)
+        self.menu.addAction('Viridis', self.set_viridis)
+        self.menu.addAction('Geology', self.set_geo)
+        self.menu.addAction('Black', self.set_black)
+        self.cmap_button.setMenu(self.menu)
+        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
+        self.cmap_button.clicked.connect(self.handleButton)
+        self.cmap_button.move(140,180)
+
+        self.clear_button = QtGui.QPushButton('Clear', self)
+        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
+        self.clear_button.clicked.connect(self.end_trace)
+        self.clear_button.move(140,360+180)
+
+        self.about_button = QtGui.QPushButton('About', self)
+        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
+        self.about_button.clicked.connect(self.open_about)
+        self.about_button.move(140,720)
+
+        self.sarndbox_button = QtGui.QPushButton('SARndbox', self)
+        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
+        self.sarndbox_button.clicked.connect(self.start_sarndbox)
+        self.sarndbox_button.move(140,900)
+
+        
+
+        self.templbl = QtGui.QLabel(self)
+        self.templbl.setAutoFillBackground(True)
+        self.templbl.setGeometry(0,0,80,30)
+        self.templbl.move(140,155)
+
+        self.contour_toggle = QtGui.QCheckBox('Contours', self)
+        self.contour_toggle.setChecked(True)
+        self.contour_toggle.stateChanged.connect(self.toggle_conts)
+        self.contour_toggle.move(140, 160)
+
+
+        #set the fonts of the buttons!
+
+        #aboutText = QtGui.QLabel()
+
+        if args.calibrate:
+            self.settings = Settings(self)
+            self.settings.move(300,300)
+            self.settings.raise_()
+        
+
+        self.pressed=False; self.moved=False  
+
+        """
+        Adjust margins to align stuff.
+        Order is left, top, right, bottom. 
+        """ 
+        self.leftmargin = 240 ; self.topmargin = 30; self.rightmargin =240; self.bottommargin = 30
+        self.setContentsMargins(self.leftmargin, self.topmargin, self.rightmargin, self.bottommargin)
+
+        self.setWindowFlags(self.windowFlags() | QtCore.Qt.FramelessWindowHint)
+        self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
+        
+        
+        #start the computation thread
+        self.gravity_thread = GravityThread()
+        self.connect(self.gravity_thread, QtCore.SIGNAL('stage_data'), self.stage_data)
+        self.gravity_thread.start()
+        self.calc_idle = True
+
+        self.connect(self.surface1, QtCore.SIGNAL('start_computation'), self.start_computation)
+        self.connect(self.surface1, QtCore.SIGNAL('clear_data'), self.clear_data)       
+
+        self.counter = 0
+        self.fps = 0. 
+        self.lastupdate = time.time()
+
+        #initial values##
+        self.x = []; self.y = []; self.data = []
+        self.newx = []; self.newy = []; self.newbg = []
+        self.xlow = 400; self.ylow = 100
+        self.xhigh = 400+1280; self.yhigh = 100+960
+        self.start_pos = []
+        self.current_pos = []
+        
+        #### Start  #####################
+        self.setMouseTracking(True)
+        self.pp = QtGui.QCursor()
+        self.start = time.time()
+        self.home.raise_()
+        self.about.lower()
+        #self.home.close()
+        self._update()
+
+
+
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            self.close()
+            sys.exit()
+    def handleButton(self):
+        print ('Hello World')
+        if self.lutval == 1:
+            self.img.setLookupTable(self.lut2)
+            self.lutval = 2
+        else:
+            self.img.setLookupTable(self.lut)
+            self.lutval = 1
+
+    def set_black(self):
+        self.surface1.set_cmap(3)
+        self.surface2.set_cmap(3)
+    def set_nocont(self):
+        self.surface1.set_cmap(0)
+        self.surface2.set_cmap(0)
+    def set_sauron(self):
+        self.surface1.set_cmap(2)
+        self.surface2.set_cmap(2)
+    def set_viridis(self):
+        self.surface1.set_cmap(1)
+        self.surface2.set_cmap(1)
+    def set_geo(self):
+        self.surface1.set_cmap(4)
+        self.surface2.set_cmap(4)
+    def toggle_conts(self):
+        val = self.contour_toggle.isChecked()
+        global CONTOURS_ON
+        CONTOURS_ON = val
+        self.surface1.set_cmap(self.surface1.imap)
+
+
+    def open_about(self):
+        self.about.raise_()
+
+        
+    def start_sarndbox(self):
+        print 'call whatever starts the sarndbox'
+        #call('/home/gravbox/src/SARndbox-2.3/bin/SARndbox -uhm -fpv -rs 0.0&', shell=True)
+        sys.exit(2)
+
+    def start_trace(self):
+        global TRACE_BOOL
+        TRACE_BOOL = True
+        self.tracex = []; self.tracey = []
+
+    def end_trace(self):
+        global TRACE_BOOL
+        TRACE_BOOL = False
+        self.tracex = []; self.tracey = []
+
+
+    def mouseMoveEvent(self, e):
+        #constrain the mouse cursor?
+        pos = e.pos()
+        if pos.x() > 1920:
+            self.pp.setPos(1920,pos.y())
+
+#will need to be rescaled
+
+    def setMouseTracking(self, flag):
+        def recursive_set(parent):
+            for child in parent.findChildren(QtCore.QObject):
+                try:
+                    child.setMouseTracking(flag)
+                except:
+                    pass
+                recursive_set(child)
+        QtGui.QWidget.setMouseTracking(self, flag)
+        recursive_set(self)
+            
+
+    def new_MouseClickEvent(self, e):
+        if e.button() == QtCore.Qt.RightButton:
+            e.accept()
+
+    def start_computation(self, arr):
+        self.start_pos = arr[0]; self.end_pos = arr[1]
+        self.gravity_thread.read_input([self.start_pos[0],self.start_pos[1],self.end_pos[0],self.end_pos[1]],args.vel_scaling)
+        self.mainbox.setCursor(QtCore.Qt.WaitCursor)
+        self.surface1._update_pos([],[])
+        self.surface2._update_pos([],[])
+        x_scaled = self.newx* YWIDTH - 7
+        self.x =  np.log( np.zeros(len(x_scaled))-1)
+        self.y = np.copy(self.x)
+        self.newx = []; self.newy = []
+        self.counter = -1
+        self.start = time.time()
+        self.mainbox.setCursor(QtCore.Qt.CrossCursor)
+        self.pressed = False; self.moved=False
+        self.tracex = []
+        self.tracey = []
+        global TRACE_LENGTH
+        TRACE_LENGTH = 0
+
+    def clear_data(self):
+        self.surface1._update_pos([0],[0])
+        self.surface2._update_pos([0],[0])
+        self.tracex = []
+        self.tracey = []
+        self.x = []
+        self.y = []
+        global TRACE_LENGTH
+        TRACE_LENGTH = 0
+        self.pressed = True
+
+        #self.surface1.close()
+        #self.surface1 = Surface(self)
+        #self.surface1.move(400,100)
+
+
+    def stage_data(self, data):
+        if len(self.newx) <1:
+            self.counter = 0
+        self.newx, self.newy, self.newbg, self.calc_idle = data
+        #self.newy = self.newy+1
+
+    def _update(self):
+        if self.counter >= 0:
+
+          if self.need_new:
+            #self.surface1.close()
+            self.surface2.setGeometry(1920+self.xstart,0+self.ystart, self.xspan, self.yspan)
+            self.surface2.setContentsMargins(self.lmargin,self.tmargin, self.rmargin, self.bmargin)
+            self.surface2.update()
+            #self.surface1.raise_()
+            self.update()
+            self.need_new= False
+          #print self.pp.pos().x()
+          #print self.y; self.x
+          if not self.pressed:
+            self.surface1._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
+            self.surface2._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
+
+          if self.pressed:
+            #print self.pp.pos(), 'this'
+            self.current_pos = [(self.pp.pos().x()-206)/float(1508.), (self.pp.pos().y())/float(1080.)]
+            
+            #print self.current_pos, self.start_pos
+
+            self.surface1._update_pos([YWIDTH-self.start_pos[0]*YWIDTH,YWIDTH-self.current_pos[0]*YWIDTH],[self.start_pos[1]*XWIDTH,self.current_pos[1]*XWIDTH],color='r')
+            self.surface2._update_pos([580*2-self.start_pos[0]*580*2,580-self.current_pos[0]*580],[self.start_pos[1]*410,self.current_pos[1]*410],color='r')
+
+          QtCore.QTimer.singleShot(6.5, self._update)
+          self.counter += 1
+          
+          #staggered loading of data
+          if self.counter == len(self.newx)-50:
+            x_scaled = self.newx* YWIDTH #- 7
+            y_scaled = YWIDTH- (self.newy * XWIDTH) #- 12
+            self.x = np.append(self.x, x_scaled)
+            self.y = np.append(self.y, y_scaled)
+            #print x_scaled[0], y_scaled[0]
+            print 'updating'
+          if self.counter == len(self.newx)-20:
+            bg = self.newbg / scaling
+            #bg[0,0] = 600
+            #bg[0,1] = -5
             self.data = np.rot90(bg,1)
             self.surface1._update_bg(bg)
             self.surface2._update_bg(bg,stretch=True)
