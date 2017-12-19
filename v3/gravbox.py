@@ -62,6 +62,10 @@ cmap_viridis = np.load('./aux/cmap_viridis.npy')
 cmap_sauron = np.load('./aux/cmap_sauron.npy')
 cmap_geo = np.load('./aux/cmap_geo.npy')
 
+#fonts
+
+#lato_reg = QtGui.QFontDatabase.addApplicationFont('./aux/lato_font/Lato-Regular.ttf')
+
 class AboutScreen(QtGui.QWidget):
      def __init__(self, parent=None):
         super(AboutScreen,self).__init__(parent)
@@ -70,25 +74,30 @@ class AboutScreen(QtGui.QWidget):
         #self.setCentralWidget(self.mainbox)
         self.setLayout(QtGui.QGridLayout())
 
-        self.setGeometry(0,0,500,500)
+        self.setGeometry(0,0,700,700)
 
         '''self.bck = QtGui.QLabel(self)
         self.bck.setPixmap(QtGui.QPixmap('./aux/starfield.png'))
         self.bck.setGeometry(0,0,500,500)
         self.bck.move(0,0)'''
 
+        
+        droid_sans = QtGui.QFontDatabase.addApplicationFont('./aux/droid_font/DroidSans.ttf')
+        lato_reg = QtGui.QFontDatabase.addApplicationFont('./aux/lato_font/Lato-Regular.ttf')
+
         self.aboutText = QtGui.QLabel(self)
         self.rawtext = "GravBox is the interface application for the Augmented Reality (AR) \nSandbox for gravitational dynamics simulations designed and built \nby Dr. Hai Fu's Introduction to Astrophysics class during the 2016-\n2017 academic year and beyond.\n\nAR Sandbox is the result of an NSF-funded project on informal science \neducation for freshwater lake and watershed science developed by the \nUC Davis' W.M. Keck Center for Active Visualization in the Earth Scien-\nces (KeckCAVES), together with the UC Davis Tahoe Environmental Res-\nearch Center, Lawrence Hall of Science, and ECHO Lake Aquarium and \nScience Center."
         self.aboutText.setText(self.rawtext)
         self.aboutText.move(0,30)
-        self.aboutText.setGeometry(50,30,400,400)
+        self.aboutText.setGeometry(50*2,30,600,600)
 
         self.exit_button = QtGui.QPushButton('Close', self)
         self.exit_button.clicked.connect(self.exit_about)
-        self.exit_button.move(210,400)
+        self.exit_button.move(310,600)
         self.setAutoFillBackground(True)
-        #set the font
 
+        #set the font
+        self.aboutText.setStyleSheet("QLabel {font-family:Droid Sans; font-size:16px;} QPushbutton {font-family:Droid Sans; font-size:14px;}")
 
      def exit_about(self):
         self.lower()
@@ -258,12 +267,17 @@ class GravityThread(QtCore.QThread):
                 self.current_pos = [particle.pos[0], particle.pos[1]] 
                 self.current_vel = [particle.vel[0], particle.vel[1]]
                 
+                try:
+                    #time.sleep(.93 + (.00025*TRACE_LENGTH) - (time.time() - start_loop))
+                    time.sleep(.93  - (time.time() - start_loop))
+                except:
+                    print ''#time.sleep(.95 + (.00025*TRACE_LENGTH) - (time.time() - start_loop))
 
-                time.sleep(.89 + (.00025*TRACE_LENGTH) - (time.time() - start_loop))
                 dt = time.time()-start_loop
                 print 'LOOP TOOK: ', dt
                 if time.time() - last_idle >= args.idle_time:
                     self.idle=True
+                    self.parent().WelcomeScreen.raise_()
             else:
                 input_pos, input_vel = self.in_pos, self.in_vel
                 if self.differ(input_pos, self.previous_pos) or self.differ(input_vel, self.previous_vel):
@@ -383,11 +397,11 @@ class Surface(QtGui.QWidget):
 
 
         #black
-        r3 = np.array([[0,0,0,256],[0,0,0,256],[0,0,0,256]])
-        pos3 = np.linspace(1.9,-.9,len(r3)-1)
-        pos3= np.append(pos3, np.array([np.nan]))
+        r3 = np.array([[0,0,0,256],[255,255,255,178]])
+        pos3 = [-1,0.]
+        #pos3= np.append(pos3, np.array([np.nan]))
         self.cmap3 = pg.ColorMap(pos3, r3)
-        self.lut3 = self.cmap3.getLookupTable(-5.25,1.9,256)
+        self.lut3 = self.cmap3.getLookupTable(-1,0,2)
 
         self.luts = [self.lut, self.lut2, self.lut4, self.lut3,self.lut5]
         self.luts_base = [self.lutc, self.lut2c, self.lut4c, self.lut3,self.lut5c]
@@ -434,16 +448,16 @@ class Surface(QtGui.QWidget):
         else:    
             self.x = x; self.y = y
             num_vals = 50 / len(self.pdi_list)
-            self.pdi_list[0].setPen(color=(230,0,230,32),width=3)
+            self.pdi_list[0].setPen(color=(255, 255, 255,32),width=3)
             for i in range(len(self.pdi_list)):
                 v = self.pdi_list[i]
                 v.setData(x[i*num_vals:(i+1)*num_vals], y[i*num_vals:(i+1)*num_vals])
             if TRACE_BOOL:
-                v = self.pdi_list[0]
+                #v = self.pdi_list[0]
                 i=1
-                v.setData(np.append(x[i*num_vals:(i+1)*num_vals],self.tracex), np.append(y[i*num_vals:(i+1)*num_vals],self.tracey))
-                self.tracex = np.append(x[i*num_vals:(i+1)*num_vals],self.tracex)[::]#np.append(x,self.tracex)[::5]
-                self.tracey = np.append(y[i*num_vals:(i+1)*num_vals],self.tracey)[::]#np.append(y,self.tracey)[::5]
+                #v.setData(np.append(x[i*num_vals:(i+1)*num_vals],self.tracex), np.append(y[i*num_vals:(i+1)*num_vals],self.tracey))
+                self.tracex = np.append(x[i*num_vals:(i+1)*num_vals:5],self.tracex)[::]#np.append(x,self.tracex)[::5]
+                self.tracey = np.append(y[i*num_vals:(i+1)*num_vals:5],self.tracey)[::]#np.append(y,self.tracey)[::5]
                 if len(self.tracex) > 10000:
                     self.tracex = self.tracex[:10000]
                     self.tracey = self.tracey[:10000]
@@ -461,17 +475,15 @@ class Surface(QtGui.QWidget):
         #bg[0,0] = -600
         #bg[0,1] = 15
         self.data = np.rot90(bg,1)
+        if self.imap == 3:
+            self.data = np.zeros(bg.shape)-1.
+            self.data = np.rot90(self.data)
 
-        if stretch:
-            stretch_vals = np.ones(self.data.shape[1])
-            #stretch_vals[2:20] = 2
-            #stretch_vals[-20:-2]=2
-            #stretch_vals[20:25]=5
-            stretch_vals[50:55]=3
-            #stretch_vals[-100:-90]=2
-            #stretch_vals[-30:-20]=2
-            #stretch_vals[-2:10]=3
-            self.data = np.repeat(self.data,stretch_vals.astype(int), axis=1)
+
+        
+        if TRACE_BOOL:
+            self.data[self.tracex.astype(int),self.tracey.astype(int)] = 0.
+            #self.data = np.rot90(bg,1)
 
         self.img.setImage(self.data)
         '''if lutval != self.lutval:
@@ -481,6 +493,7 @@ class Surface(QtGui.QWidget):
             elif self.lutval == 2:
                 self.img.setLookupTable(self.lut3)
         '''
+
         if args.cont_on:
             self.mk_contours_thread.update_bg(bg)
 
@@ -625,7 +638,7 @@ class Settings(QtGui.QWidget):
         self.parent().need_new =True
 
 
-
+"""
 class Display(QtGui.QWidget):
     def __init__(self, parent=None):
         super(Display,self).__init__(parent)
@@ -725,10 +738,10 @@ class Display(QtGui.QWidget):
 
         self.pressed=False; self.moved=False  
 
-        """
-        Adjust margins to align stuff.
-        Order is left, top, right, bottom. 
-        """ 
+        '''
+        #Adjust margins to align stuff.
+        #Order is left, top, right, bottom. 
+        '''
         self.leftmargin = 240 ; self.topmargin = 30; self.rightmargin =240; self.bottommargin = 30
         self.setContentsMargins(self.leftmargin, self.topmargin, self.rightmargin, self.bottommargin)
 
@@ -954,12 +967,38 @@ class Display(QtGui.QWidget):
                 self.start = time.time()
         else:
             QtCore.QTimer.singleShot(1, self._update) 
+"""
+
+class PicButton(QtGui.QPushButton):
+    def __init__(self,text, pixmap, parent=None):
+        super(PicButton, self).__init__(parent)
+        self.pixmap = pixmap
+        self.text = text
+        self.setText(self.text)
+
+    def paintEvent(self, event):
+        painter = QtGui.QPainter(self)
+        painter.drawPixmap(event.rect(), self.pixmap)
+
+class PicCheckButton(QtGui.QCheckBox):
+    def __init__(self,text, pixmap0,pixmap1, parent=None):
+        super(PicCheckButton, self).__init__(parent)
+        self.pixmap0 = pixmap0
+        self.pixmap1 = pixmap1
+        self.text = text
+        self.setText(self.text)
+        self.setStyleSheet("QCheckBox::indicator:checked {image: url("+ self.pixmap1 +");}QCheckBox::indicator:unchecked{image: url(" +self.pixmap0 + ");}")
+        self.pixmap = QtGui.QPixmap(self.pixmap0)
 
 
+    def paintEvent(self, event):
+        painter = QtGui.QPainter(self)
+        painter.drawPixmap(event.rect(), self.pixmap)
 
-class Display2(QtGui.QWidget):
+
+class Display(QtGui.QWidget):
     def __init__(self, parent=None):
-        super(Display2,self).__init__(parent)
+        super(Display,self).__init__(parent)
         #### Create Gui Elements ###########
         self.mainbox = QtGui.QWidget()
         #self.setCentralWidget(self.mainbox)
@@ -971,7 +1010,8 @@ class Display2(QtGui.QWidget):
 
         ###LAYOUT THE DSIPLAY ###
         self.bck=QtGui.QLabel(self)
-        self.bck.setPixmap(QtGui.QPixmap('./aux/starfield.png'))
+        #self.bck.setPixmap(QtGui.QPixmap('./aux/starfield.png'))
+        self.bck.setStyleSheet("background-color:  #1b1c1d ")
         self.bck.setGeometry(0,0,1920,1080)
         self.bck.setScaledContents(True)
         self.bck.setMinimumSize(1,1)
@@ -998,50 +1038,65 @@ class Display2(QtGui.QWidget):
 
 
         #### BUTTONS ######
-        self.trail_button = QtGui.QPushButton('Trail', self)
-        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
-        self.trail_button.clicked.connect(self.start_trace)
-        self.trail_button.move(140,360)
+        #self.trail_button = QtGui.QPushButton('Trail', self)
+        #self.trail_button.setStyleSheet("background-image: url(" + './aux/assets' + "/trail_off.png);")
+        self.trail_button = PicCheckButton('Trail', "./aux/assets/trail_off.png", "./aux/assets/trail_on.png",self)
+        #self.trail_button.clicked.connect(self.start_trace)
+        self.trail_button.stateChanged.connect(self.toggle_trace)
+        #self.trail_button.setIcon(QtGui.QIcon("./aux/assets/trail_off.png"))
+        #self.trail_button.setIconSize(QtCore.QSize(150,150))
+        self.trail_button.setGeometry(0,0,250,100)
+        self.trail_button.setStyleSheet('font-size:24px;')
+        self.trail_button.move(80,360-50)
 
-        self.cmap_button = QtGui.QPushButton('ColorMap', self)
+        #self.cmap_button = QtGui.QPushButton('ColorMap', self)
+        self.cmap_button = PicButton('ColorMap', QtGui.QPixmap("./aux/assets/colormap.png"),self)
         self.menu = QtGui.QMenu()
-        #self.menu.addAction('Contours',self.set_cont)
         self.menu.addAction('Default', self.set_nocont)
         self.menu.addAction('Sauron', self.set_sauron)
         self.menu.addAction('Viridis', self.set_viridis)
         self.menu.addAction('Geology', self.set_geo)
         self.menu.addAction('Black', self.set_black)
         self.cmap_button.setMenu(self.menu)
-        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
-        self.cmap_button.clicked.connect(self.handleButton)
-        self.cmap_button.move(140,180)
+        self.cmap_button.setStyleSheet('font-size:24px;')
+        self.menu.setStyleSheet('font-size:24px;')
+        self.cmap_button.setGeometry(0,0,250,100)
+        self.cmap_button.move(80,180-50)
 
-        self.clear_button = QtGui.QPushButton('Clear', self)
-        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
-        self.clear_button.clicked.connect(self.end_trace)
-        self.clear_button.move(140,360+180)
+        #self.clear_button = QtGui.QPushButton('Reset', self)
+        self.contour_toggle = PicCheckButton('Contour', "./aux/assets/contours_on.png", "./aux/assets/contours_off.png",self)
+        #self.contour_toggle.clicked.connect(self.toggle_conts)
+        self.contour_toggle.setChecked(True)
+        self.contour_toggle.stateChanged.connect(self.toggle_conts)
+        self.contour_toggle.setGeometry(0,0,250,100)
+        self.contour_toggle.setStyleSheet('font-size:24px;')
+        self.contour_toggle.move(80,360+180-50)
 
-        self.about_button = QtGui.QPushButton('About', self)
-        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
+        #self.about_button = QtGui.QPushButton('About', self)
+        self.about_button = PicButton('About', QtGui.QPixmap("./aux/assets/about.png"),self)
         self.about_button.clicked.connect(self.open_about)
-        self.about_button.move(140,720)
+        self.about_button.setGeometry(0,0,250,100)
+        self.about_button.setStyleSheet('font-size:24px;')
+        self.about_button.move(80,720-50)
 
-        self.sarndbox_button = QtGui.QPushButton('SARndbox', self)
-        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
+        #self.sarndbox_button = QtGui.QPushButton('SARndbox', self)
+        self.sarndbox_button = PicButton('Sarndbox', QtGui.QPixmap("./aux/assets/sarndbox.png"),self)
         self.sarndbox_button.clicked.connect(self.start_sarndbox)
-        self.sarndbox_button.move(140,900)
+        self.sarndbox_button.setGeometry(0,0,250,100)
+        self.sarndbox_button.setStyleSheet('font-size:24px;')
+        self.sarndbox_button.move(80,900-50)
 
         
 
-        self.templbl = QtGui.QLabel(self)
+        '''self.templbl = QtGui.QLabel(self)
         self.templbl.setAutoFillBackground(True)
         self.templbl.setGeometry(0,0,80,30)
-        self.templbl.move(140,155)
+        self.templbl.move(80,155)
 
         self.contour_toggle = QtGui.QCheckBox('Contours', self)
         self.contour_toggle.setChecked(True)
         self.contour_toggle.stateChanged.connect(self.toggle_conts)
-        self.contour_toggle.move(140, 160)
+        self.contour_toggle.move(80, 160)'''
 
 
         #set the fonts of the buttons!
@@ -1132,7 +1187,24 @@ class Display2(QtGui.QWidget):
         global CONTOURS_ON
         CONTOURS_ON = val
         self.surface1.set_cmap(self.surface1.imap)
+        if CONTOURS_ON:
+            self.contour_toggle.pixmap = QtGui.QPixmap(self.contour_toggle.pixmap0)
+        else:
+            self.contour_toggle.pixmap = QtGui.QPixmap(self.contour_toggle.pixmap1)
 
+    def toggle_trace(self):
+        val =self.trail_button.isChecked()
+        global TRACE_BOOL
+        TRACE_BOOL = val
+
+        if TRACE_BOOL:
+            self.tracex = []; self.tracey = []
+            self.trail_button.pixmap = QtGui.QPixmap(self.trail_button.pixmap1)
+        else:
+            self.trail_button.pixmap = QtGui.QPixmap(self.trail_button.pixmap0)
+            self.tracex = []; self.tracey = []
+            global TRACE_LENGTH
+            TRACE_LENGTH = 0
 
     def open_about(self):
         self.about.raise_()
@@ -1152,6 +1224,13 @@ class Display2(QtGui.QWidget):
         global TRACE_BOOL
         TRACE_BOOL = False
         self.tracex = []; self.tracey = []
+        self.gravity_thread.idle = True
+        self.surface1._update_pos([0],[0])
+        self.surface2._update_pos([0],[0])
+        self.x = []
+        self.y = []
+        global TRACE_LENGTH
+        TRACE_LENGTH = 0
 
 
     def mouseMoveEvent(self, e):
@@ -1200,6 +1279,7 @@ class Display2(QtGui.QWidget):
     def clear_data(self):
         self.surface1._update_pos([0],[0])
         self.surface2._update_pos([0],[0])
+        time.sleep(.5)
         self.tracex = []
         self.tracey = []
         self.x = []
@@ -1207,6 +1287,7 @@ class Display2(QtGui.QWidget):
         global TRACE_LENGTH
         TRACE_LENGTH = 0
         self.pressed = True
+
 
         #self.surface1.close()
         #self.surface1 = Surface(self)
@@ -1238,7 +1319,8 @@ class Display2(QtGui.QWidget):
 
           if self.pressed:
             #print self.pp.pos(), 'this'
-            self.current_pos = [(self.pp.pos().x()-206)/float(1508.), (self.pp.pos().y())/float(1080.)]
+            #self.current_pos = [(self.pp.pos().x()-206)/float(1508.), (self.pp.pos().y())/float(1080.)]
+            self.current_pos = [(self.pp.pos().x()-409)/float(1508.), (self.pp.pos().y())/float(1080.)]
             
             #print self.current_pos, self.start_pos
 
@@ -1303,5 +1385,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     app = QtGui.QApplication(sys.argv)
     thisapp = Display()
-    thisapp.show()#showFullScreen()
+    thisapp.show()
     sys.exit(app.exec_())

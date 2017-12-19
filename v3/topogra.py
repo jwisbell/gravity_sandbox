@@ -139,9 +139,15 @@ def generate_baseplane(params,shape=(580,410)):
 
 def update_surface(baseplane,bounds,prev=None,FLOOR=-600,verbose=False):
     """Read updated topography and calibrate for use"""
-    (depth,_)= get_depth()
+    #(depth,_)= get_depth()
+    d = []
+    for i in range(10):
+        (depth,_)= get_depth()
+        d.append(depth)
+        #time.sleep()
+    depth = np.sum(d[::],axis=0)/10.
+    print depth
     topo,pix = calibrate(depth,baseplane,bounds)
-    #print topo, 'wtf'
     if verbose:
         print 'SURFACE STATS'
         print np.mean(topo), np.max(topo),np.min(topo), np.median(topo)
