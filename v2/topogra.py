@@ -6,7 +6,7 @@ import scipy.optimize
 #import matplotlib.pyplot as plt
 
 
-PLANE_PARAMS = [0.01,-0.001, 720.]#[0.006452, -0.032609, 712.261579]
+PLANE_PARAMS = [0.01,-0.001, 730.]#[0.006452, -0.032609, 712.261579]
 SCALE_FACTOR = 1./50
 
 
@@ -67,13 +67,16 @@ def calibrate(surface, baseplane):
     #need to remove planar slope
     surface = surface[40:-30, 30:-30] - baseplane
     BAD_PIX = np.where(surface>=200)
+    surface *= .1#SCALE_FACTOR
     #scale
-    surface = np.power(surface,1.)
-    surface *= 1.#SCALE_FACTOR
+    x =  np.power(np.e,np.absolute(surface))
+    surface = x * np.absolute(surface) / surface * 10
+    #surface -= .25*np.max(surface)
+    
     #surface = np.negative(surface)
     surface[BAD_PIX] = 0.#np.nan
 
-    return surface, BAD_PIX
+    return np.nan_to_num(surface), BAD_PIX
 
 def generate_baseplane(shape=(580,410)):
     """Run on startup to get quick baseplane for calibration using PLANE_PARAMS"""
@@ -84,7 +87,7 @@ def generate_baseplane(shape=(580,410)):
     return Z
 
 
-def update_surface(baseplane,prev=None,FLOOR=-20,verbose=False):
+def update_surface(baseplane,prev=None,FLOOR=-710,verbose=False):
     """Read updated topography and calibrate for use"""
     (depth,_)= get_depth()
     topo,pix = calibrate(depth,baseplane)
@@ -97,7 +100,7 @@ def update_surface(baseplane,prev=None,FLOOR=-20,verbose=False):
         if prev == None:
             return topo #- np.nanmedian(topo)
         else:
-            return prev
+            return topo
     return topo #- np.nanmedian(topo)
 
 

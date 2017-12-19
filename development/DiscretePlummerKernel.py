@@ -11,7 +11,7 @@ import time
 import wisdom_parse
 import matplotlib.pyplot as plt
 a = 1.       # Plummer Radius
-G = 10.           # Setting Gravitational constant to 1 for simplification
+G = 1.           # Setting Gravitational constant to 1 for simplification
 y = 1           
 u = []
 '''for x in range(-640,640):

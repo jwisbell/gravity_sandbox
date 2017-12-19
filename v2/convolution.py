@@ -5,6 +5,7 @@ from scipy.ndimage.interpolation import shift
 import time
 #import wisdom_parse
 from scipy import signal
+import matplotlib.pyplot as plt
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -36,7 +37,7 @@ Convolve the density array with the acceleration kernel to get gx, gy using the 
 Two-Dim convolution to maintain shape without supressing information. 
 Found that numpy is faster in this case than FFTW, problably due to python wrappers and the overhead of multi-core setup.
 """
-def convolve2d(arr, x_kernel, y_kernel,method='np'):
+def convolve2d(arr, x_kernel, y_kernel,method='wrap'):
 	#Pad the arrays with zeros so they are the desired shape
 	bck = np.zeros(x_kernel.shape)
 	dx = abs(arr.shape[0] - x_kernel.shape[0])/2
@@ -82,24 +83,40 @@ def convolve2d(arr, x_kernel, y_kernel,method='np'):
 		return gx, gy
 	#Do the convolution using numpy -  faster than FFTW in this case
 	elif method=='wrap':
-		bck = np.zeros( (arr.shape[0]*3, arr.shape[1]*3) )
+		bck = np.zeros( (arr.shape[0]*2, arr.shape[1]*2) )
+		print bck.shape
+		print arr.shape
 		wx = arr.shape[0]; wy =arr.shape[1]
 		#the middle section is the array we care about
-		bck[wx:2*wx, wy:2*wy] = arr
+		bck[wx/2:-wx/2, wy/2:-wy/2] = arr
 
 		#fill the other 8 sections with a value
 		vals = np.copy(arr)
+		tl = vals[:wx/2,:wy/2]
+		tr = vals[wx/2:,:wy/2]
+		top = vals[:,:wy/2]
+		bottom = vals[:,wy/2:]
+		bl = bottom[:wx/2,:]
+		br = bottom[wx/2:,:]
 		#vals = np.zeros(arr.shape)
 		#vals = np.ones(arr.shape)*np.mean(arr)
 
-		bck[:wx, :wy] = vals
+		'''bck[:wx, :wy] = vals
 		bck[:wx, wy:2*wy] = vals
 		bck[:wx, -wy:] = vals
 		bck[wx:2*wx, :wy] = vals
 		bck[wx:2*wx, -wy:] = vals
 		bck[-wx:, :wy] = vals
 		bck[-wx:, wy:2*wy] = vals
-		bck[-wx:, -wy:] = vals
+		bck[-wx:, -wy:] = vals'''
+		bck[:wx/2,:wy/2] = br
+		bck[wx/2:-wx/2, :wy/2] = bottom
+		bck[-wx/2:,:wy/2] = bl
+		bck[:wx/2, wy/2:-wy/2] = vals[-wx/2:,:] #right
+		bck[-wx/2:,wy/2:-wy/2] = vals[:wx/2,:] #left
+		bck[:wx/2,-wy/2:] = tr
+		bck[wx/2:-wx/2,-wy/2:] = top
+		bck[-wx/2:,-wy/2:] = tl
 
 		tform1 = np.fft.fft2(bck)
 		gx = tform1 * x_kernel
@@ -139,8 +156,6 @@ def convolve2d(arr, x_kernel, y_kernel,method='np'):
 		#---- d2x and d2y ---
 		g2x, junk = np.gradient(gx)
 		g2y, junk = np.gradient(gy)
-
-		print gx.shape
 		
 		return gx, gy, g2x, g2x
 

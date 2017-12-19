@@ -25,7 +25,7 @@ for y in range(-460,460):
     u = np.vstack((p,u))        # Combine x and y array'''
 
 #dx = np.zeros((len(range(-480,480)),len(range(-640,640))))
-xw = int(1.5*410); yw =int(1.5*580)
+xw = int(410); yw =int(580)
 dx = np.zeros((len(range(-xw,xw)),len(range(-yw,yw))))
 dy = np.copy(dx)
 for y in range(-yw,yw):

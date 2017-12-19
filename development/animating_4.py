@@ -8,8 +8,8 @@ import subprocess
 start = time.time()
 end = time.time()
 scaling = 16
-XWIDTH = 600#480.
-YWIDTH = 422#600#640.
+YWIDTH = 600#480.
+XWIDTH = 422#600#640.
 y0 = 20
 x0 = 35
 
@@ -19,8 +19,8 @@ def load_data():
             x, y = np.load('algorithm_output.npy')
             # = 640-y-40
             #x = x
-            x_scaled = x * XWIDTH #+ x0
-            y_scaled = 600- (y * YWIDTH)
+            x_scaled = x * YWIDTH #+ x0
+            y_scaled = 600- (y * XWIDTH)
             num_pts = 1000
             step = int(len(x)/num_pts)
             x = x_scaled[::10] ; y = y_scaled[::10]
@@ -32,45 +32,18 @@ def load_data():
             #bg = np.roll(bg,-28,axis=1) # x axis
             #bg = np.roll(bg,10,axis=0)
             #bg = bg[10:-10,:]
-            subprocess.call('rm algorithm_output.npy',shell=True)
+            #subprocess.call('rm algorithm_output.npy',shell=True)
             return x, y, bg	
         except:
             continue
 
 x, y, bg = load_data()
-#print cmap_vals
 
-def rainbow():
-    array = np.empty((256, 4))
-    abytes = np.arange(0, 1, 0.00390625)
-    array[:, 0] = np.abs(2 * abytes - 0.5) * 255
-    array[:, 1] = np.sin(abytes * np.pi) * 255
-    array[:, 2] = np.cos(abytes * np.pi / 2) * 255
-    array[:, 3] = 1
-    #print array
-    return array
-def cubehelix(gamma=1.0, s=0.5, r=-1.5, h=1.0):
-    def get_color_function(p0, p1):
-        def color(x):
-            xg = x ** gamma
-            a = h * xg * (1 - xg) / 2
-            phi = 2 * np.pi * (s / 3 + r * x)
-            return xg + a * (p0 * np.cos(phi) + p1 * np.sin(phi))
-        return color
-
-    array = np.empty((256, 4))
-    abytes = np.arange(0, 1, 1/256.)
-    array[:, 0] = get_color_function(-0.14861, 1.78277)(abytes) * 255
-    array[:, 1] = get_color_function(-0.29227, -0.90649)(abytes) * 255
-    array[:, 2] = get_color_function(1.97294, 0.0)(abytes) * 255
-    array[:, 3] = 50
-    return array
 
 cmap_viridis = np.array([(68,1,84,255), (72,21,103,255), (72,38,119,255),(69,55,124,255),(64,71,136,255),(57,86,140,255), (51,99,141,255),(45,112,142,255),(40,125,142,255),(35,138,141,255),(31,150,139,255),(32,163,135,255),(60,187,117,255),(85,198,103,255),(115,208,85,255),(149,216,64,255),(184,272,41,255),(220,227,25,255),(253,231,37,255),(0,0,0,255)])
+cmap_jet = np.load('jet_cmap.npy')
 
-
-cmap_jet = np.array([(0,0,204,255),(0,0,255,255),(0,255,255,255),(0,255,0,255),(255,255,0,0),(255,128,0,255),(255,0,0,255),(153,0,0,255)])
-
+#cmap_jet = np.array([(0,0,204,255),(0,0,255,255),(0,255,255,255),(0,255,0,255),(255,255,0,0),(255,128,0,255),(255,0,0,255),(153,0,0,255)])
 
 
 
@@ -93,18 +66,19 @@ class App(QtGui.QMainWindow):
         #self.mainbox.layout().addWidget(self.label)
 
         self.view = self.canvas.addViewBox()
-        self.view.setAspectLocked(True)
+        self.view.setAspectLocked(False)
         self.view.setRange(xRange=[0,600],yRange=[0,422],padding=-1)
         self.view.setMouseEnabled(x=False,y=False)
         #self.mainbox.setContentsMargins(-150,10,-0,-10)#(-40,10,-130,-10)
-        #self.mainbox.setContentsMargins(-120,100,0,-80)#-100,-90,-70,-40)
-        self.mainbox.setContentsMargins(-0,0,0,0)
+        self.mainbox.setContentsMargins(-80,0,-50,-80)#-100,-90,-70,-40)
+        #self.mainbox.setContentsMargins(-0,0,0,0)
 
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.FramelessWindowHint)
         self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
         
-        #self.setGeometry(0,0, 1216, 972.8)
-        self.setGeometry(0,0, 640, 512)#,1280,1024) #JUST IN CASE, CTRL-ALT-ESC
+        self.setGeometry(1280,0, 1216, 972.8)
+        #self.setGeometry(1280,0, 1280, 1024)
+        #self.setGeometry(0,0, 640, 512)#,1280,1024) #JUST IN CASE, CTRL-ALT-ESC
         #self.mainbox.selectAll()
         self.canvas.mouseMoveEvent = self.mainbox.mouseMoveEvent
         self.mainbox.setFocus()
@@ -116,8 +90,8 @@ class App(QtGui.QMainWindow):
         self.canvas.nextRow()
 
 
-		    #bipolar colormap
-        r = cmap_viridis
+        #r = cmap_viridis
+        r = cmap_jet
         global bg
         #print np.max(bg), np.min(bg)
         pos = np.linspace(1.1,-.4,len(r)-1)#[0., 1., 0.5, 0.25, 0.75])
@@ -125,7 +99,7 @@ class App(QtGui.QMainWindow):
         color = np.array([(0,0,255,255),(0,255,0,255),(255,128,0,255),(255,0,0,255)])
         #color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
         cmap = pg.ColorMap(pos, r)
-        lut = cmap.getLookupTable(-.009,1.05, 256)
+        lut = cmap.getLookupTable(.5,1.0,256)#(-.009,1.05, 256)
 
         
         #### Set Data  #####################
@@ -282,6 +256,8 @@ class App(QtGui.QMainWindow):
             #self.y = y + 20
             self.data = np.rot90(bg,1)
             self.img.setImage(self.data)
+            self.c = pg.IsocurveItem()#level=v, pen=(i, len(levels)*1.5))
+            self.c.setParentItem(self.img)            
             exporter = pg.exporters.ImageExporter(self.img)
             exporter.export('color_field.jpg')
 

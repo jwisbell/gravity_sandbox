@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # Start Sandbox
-/home/gravity/src/SARndbox-2.2/bin/SARndbox -uhm -rs 0.0&
+/home/gravbox/src/SARndbox-2.3/bin/SARndbox -uhm -fpv -rs 0.0&
 #/home/gravity/src/SARndbox-2.2/bin/SARndbox -uhm -fpv -rer 20 100 &
 
 sleep 1.0;

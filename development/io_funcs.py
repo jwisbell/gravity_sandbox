@@ -23,13 +23,27 @@ def read_from_app(vel_scaling=1.):
 	deltay = data[5]
 	angle = np.arctan2(deltay,deltax) #+ np.pi/2
 
-	mag = data[3]*VEL_FACTOR*vel_scaling
+	mag = data[3]*vel_scaling
 	vel = np.array([np.cos(angle)*mag, np.sin(angle)*mag])
 	#obj = data[4]
 	f.close()
 	print pos, vel#, obj
 	return pos, vel#, obj
 
+def read_from_app_2(vel_scaling=1000,x_factor=600, y_factor=424):
+	#call('adb pull /sdcard/kivy/GravBox/algorithm_input.txt /home/gravbox/Desktop/gravboxv2/gravity_sandbox/development/algorithm_input.txt',shell=True)
+	x_i, y_i, x_f, y_f = np.loadtxt('/home/gravbox/Desktop/gravbox/gravity_sandbox/development/algorithm_input.txt', unpack=True,dtype='float',delimiter=',')
+	#x_i /= 1600; x_f /= 1600
+	#y_i = 1 - y_i/1200; y_f = 1- y_f/1200
+	pos = np.array([y_i * y_factor, x_i * x_factor])	
+	d_x = x_f - x_i
+	d_y = y_f - y_i
+	ang = np.arctan2(d_x,d_y)
+	mag = np.sqrt(d_x**2 + d_y**2) * vel_scaling
+	vel = np.array([np.cos(ang)*mag, np.sin(ang)*mag])
+	
+	print pos, vel
+	return pos, np.array([10,10])
 
 	#to_send = [float(d) for d in data]
 	#return to_send
@@ -64,8 +78,16 @@ def idle_send():
 	#call('convert /home/gravity/Desktop/color_field.jpg -rotate 180 /home/gravity/Desktop/color_field.jpg',shell=True)
 	call('adb push /home/gravity/Desktop/color_field.jpg /storage/emulated/0/sandbox/color_field_%i.jpg'%(0), shell=True)
 	call('adb push /home/gravity/Desktop/color_field.jpg /storage/emulated/0/sandbox/color_field_%i.jpg'%(1), shell=True)
+def send_topo():
+	call('adb shell rm /sdcard/kivy/GravBox/color_field_%i.jpg'%(1), shell=True)
+	call('adb shell rm /sdcard/kivy/GravBox/color_field_%i.jpg'%(0), shell=True)
+	#call('convert /home/gravity/Desktop/color_field.jpg -rotate 180 /home/gravity/Desktop/color_field.jpg',shell=True)
+	call('adb push /home/gravbox/Desktop/gravbox/gravity_sandbox/development/color_field.jpg /sdcard/kivy/GravBox/color_field_%i.jpg'%(0), shell=True)
+	call('adb push /home/gravbox/Desktop/gravbox/gravity_sandbox/development/color_field.jpg /sdcard/kivy/GravBox/color_field_%i.jpg'%(1), shell=True)
+	call('adb shell ls -l /sdcard/kivy/GravBox/', shell=True)
+	time.sleep(2)
 
-
+def write_to_tablet_2(data):
 def write_to_tablet(data):
 	global IM
 	f = open('aux/algorithm_output.csv','w')

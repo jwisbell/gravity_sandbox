@@ -146,7 +146,6 @@ def update_surface(baseplane,bounds,prev=None,FLOOR=-600,verbose=False):
         d.append(depth)
         #time.sleep()
     depth = np.sum(d[::],axis=0)/10.
-    print depth
     topo,pix = calibrate(depth,baseplane,bounds)
     if verbose:
         print 'SURFACE STATS'

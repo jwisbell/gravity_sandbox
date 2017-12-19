@@ -103,21 +103,15 @@ class Particle():
             if self.pos[0] > self.MAXY:
                 self.pos[0] = self.MAXY
                 self.vel[0] = self.vel[0] * -1
-                print 'BOUNCE'
             elif self.pos[0] <= 0: #TOP
-                print 'old pos,vel',self.pos, self.vel
                 self.pos[0] = 1
                 self.vel[0] = self.vel[0]* -1
-                print 'BOUNCE'
-                print 'new pos,vel',self.pos, self.vel
             elif self.pos[1] > self.MAXX: #right
                 self.pos[1] = self.MAXX
                 self.vel[1] = self.vel[1] * -1
-		print 'BOUNCE'
             elif self.pos[1] <= 0:#left
                 self.pos[1] = 1
                 self.vel[1] = self.vel[1] * -1
-                print 'BOUNCE'
             return True
         if edge_mode == 'pacman':
             if self.pos[0] >= self.MAXY:

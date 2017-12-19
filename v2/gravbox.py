@@ -111,7 +111,7 @@ if __name__ == '__main__':
 	#------ Initial Sandbox Calibration -------
 
 	baseplane = topo.generate_baseplane()
-	prev_dem = topo.update_surface(baseplane, None)
+	#prev_dem = topo.update_surface(baseplane, None)
 
 	# Initialize figure for matplotlib animation
 	#figure = mpl.Animate(prev_dem)
@@ -231,7 +231,7 @@ if __name__ == '__main__':
 			"""
 
 		elif args.debug ==1:
-			scaled_dem_array = np.zeros((480,640))
+			scaled_dem_array = np.zeros((480,640))+2
 			
 			"""#scaled_dem_array[235:245,315:325] = 50
 			#scaled_dem_array[150:160,200:210] = 4
@@ -246,9 +246,14 @@ if __name__ == '__main__':
 			scaled_dem_array[yw*.5,xw*.5]=20
 			print scaled_dem_array.shape"""
 			shp = scaled_dem_array.shape
-			scaled_dem_array = mk_gauss(5,5,xshape=shp[1], yshape=shp[0]) +0
+			#extended source 
+			
+			#point mass
+			
 			scaled_dem_array = scaled_dem_array[40:-30, 30:-30] 
 			xw = scaled_dem_array.shape[1]; yw = scaled_dem_array.shape[0]
+			scaled_dem_array[yw/2, xw/2] = 24.
+			#scaled_dem_array = mk_gauss(5,5,xshape=xw, yshape=yw) +0
 		
 			
 			"""
@@ -256,18 +261,19 @@ if __name__ == '__main__':
 			"""
 			
 			
-			gx,gy, g2x, g2y = convolution.convolve2d(scaled_dem_array, X_KERNEL,Y_KERNEL)
+			gx,gy, g2x, g2y = convolution.convolve2d(scaled_dem_array, X_KERNEL,Y_KERNEL,'wrap')
 			#gx = np.negative(gx)*.1
 			#gy = np.negative(gy)*.1
-			current_pos = [yw*.45,xw*.5]
+			current_pos = [0,0]
 			current_vel = [0,0.]
 			
 
 			particle = gravity_algorithm.Particle(current_pos, np.array(current_vel), (gx,gy),g2x,g2y)
-			particle.kick(.0001)
-			#first = False
+			#particle.kick(.0001)
+			
 
-			gravity_algorithm.kepler_check(particle,scaled_dem_array, step=.0001,kind='leapfrog2')
+			#gravity_algorithm.kepler_check(particle,scaled_dem_array, step=.0001,kind='leapfrog2')
+			gravity_algorithm.step_check(particle, scaled_dem_array)
 			#gravity_algorithm.energy_check(particle, pos=[(yw*.5,xw*.5)], masses=[50], step=0.0005, times=5000000, kind='leapfrog')
 			sys.exit()
 		if idle:

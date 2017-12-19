@@ -60,18 +60,15 @@ class Particle():
 
     def leapfrog2(self, step=0.01):
         new_pos = np.array(self.pos) + np.array(self.vel)*step
-        #add gradient stuff?
-        #print new_pos
-        new_x = self.ggx[int(self.pos[0]),int(self.pos[1])] * (self.pos[0]-int(self.pos[0])) 
-        #print self.ggx[int(new_pos[0]),int(new_pos[1])] * (new_pos[0]-int(new_pos[0]))
-        new_y = self.ggy[int(self.pos[0]),int(self.pos[1])] * (self.pos[1]-int(self.pos[1])) 
-        #new_pos = [new_x,new_y]#[self.pos[0]+np.array(self.ggx[int(self.pos[0]),int(self.pos[1])])*(self.pos[0]-int(self.pos[0])), self.pos[1]+np.array(self.ggy[int(self.pos[0]),int(self.pos[1])])*(self.pos[1]-int(self.pos[1])]
-        #print new_pos
-	#i = input()
+    
+        #new_x = self.ggx[int(self.pos[0]),int(self.pos[1])] * (self.pos[0]-int(self.pos[0])) 
+        #new_y = self.ggy[int(self.pos[0]),int(self.pos[1])] * (self.pos[1]-int(self.pos[1])) 
 	try:
         	new_accel = np.array([self.dx[int(new_pos[0]),int(new_pos[1])], self.dy[int(new_pos[0]),int(new_pos[1])]])
+            #new_accel = np.array([self.dx[int(new_pos[1]),int(new_pos[0])], self.dy[int(new_pos[1]),int(new_pos[0])]])
 	except:
 		new_accel = np.array([self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]])
+        	#new_accel = np.array([self.dx[int(self.pos[1]),int(self.pos[0])], self.dy[int(self.pos[1]),int(self.pos[0])]])
 
         new_vel = self.vel + step * new_accel #+ np.array([new_x,new_y]) * step
 
@@ -102,22 +99,23 @@ class Particle():
         if edge_mode == 'stop':
             return self.pos[0] < self.MAXX and self.pos[0] > self.MIN and self.pos[1] < self.MAXY and self.pos[1] > self.MIN
         if edge_mode == 'reflect':
-            if self.pos[0] >= 479:#self.MAXY:
-                self.pos[0] = 478#self.MAXY-1
+            #bottom
+            if self.pos[0] >= self.MAXY-3:
+                self.pos[0] = self.MAXY-4
                 self.vel[0] = self.vel[0] * -1
                 print 'BOUNCE'
-            elif self.pos[0] <= 1:
+            elif self.pos[0] <= 4:
                 print 'old pos,vel',self.pos, self.vel
                 self.pos[0] = 5
                 self.vel[0] = self.vel[0]* -1
                 print 'BOUNCE'
                 print 'new pos,vel',self.pos, self.vel
-            elif self.pos[1] >= 639:#self.MAXX:
-                self.pos[1] = 638#self.MAXX-1
+            elif self.pos[1] >= self.MAXX:
+                self.pos[1] = self.MAXX-1
                 self.vel[1] = self.vel[1] * -1
 		print 'BOUNCE'
-            elif self.pos[1] <= 1:
-                self.pos[1] = 5
+            elif self.pos[1] <= 0:
+                self.pos[1] = 1
                 self.vel[1] = self.vel[1] * -1
                 print 'BOUNCE'
             return True
@@ -142,7 +140,6 @@ def kepler_check(test_particle,potential, orbits=1,step=0.001,edge_mode='pacman'
 		print 'Starting from ', [y,290]
 		num_orbit = 0
 		test_particle.pos = [y,290]
-		#vel = -np.sqrt(10.*abs(240 - x))
 		test_particle.vel = [0, 0]
 		init_pos = np.copy(test_particle.pos)
    		init_vel = np.copy(test_particle.vel)
@@ -156,7 +153,6 @@ def kepler_check(test_particle,potential, orbits=1,step=0.001,edge_mode='pacman'
 	            		test_particle.update(step,kind)
 				posx.append(test_particle.pos[0])
             			posy.append(test_particle.pos[1])
-                        	#print test_particle.pos
     	        		if abs(test_particle.pos[0] - init_pos[0]) < 2  and abs(test_particle.pos[1] - init_pos[1]) < 2:
 					if near == False:
 						num_orbit += 1
@@ -197,6 +193,54 @@ def kepler_check(test_particle,potential, orbits=1,step=0.001,edge_mode='pacman'
 	plt.title('Kepler 3 Check')
 	plt.savefig('./debug/kepler3_gauss_leapfrog2.png')
 
+def step_check(test_particle,potential,edge_mode='pacman',kind='leapfrog'):
+    steps = [.0001, .0005, .001, .005, .01, .05, .1]#, .05, .1]
+    steps = [50,10,5,1,.5,.1,.05,.01,.005,.001]#,.0005,.0001]
+    #steps = [.01,.005,.001, .0005, .0001]
+    periods = []; axis = []
+    total_posx = []; total_posy = []; total_pot = []
+    time = 5000
+    max_loc = np.where(potential == np.max(potential))
+    x0 = max_loc[0][0]; y0 = max_loc[1][0]
+    print x0, y0
+    for s in steps:
+        print 'Starting from ', [230,290]
+        num_steps = time/s
+        i = 0
+        test_particle.pos = [250,290]
+        test_particle.vel = [0, 0.]
+        test_particle.kick(s/2.)
+        init_pos = np.copy(test_particle.pos)
+        init_vel = np.copy(test_particle.vel)
+        num_iter = 0
+        near = True
+        times = [0]
+        posx = []; posy = []
+        while i < num_steps:
+            if test_particle.is_inbounds(edge_mode):
+                    test_particle.update(s,'leapfrog2')
+                    posx.append(test_particle.pos[0])
+                    posy.append(test_particle.pos[1])
+            else:
+                break
+            i+=1
+        print 'Completed %i iter with step=%f'%(num_steps, s)
+        '''fig = plt.figure()
+        plt.imshow(test_particle.dx)
+        plt.plot(posy, posx,c='w')
+        plt.show()
+        plt.close()
+        return'''
+        total_posx.append(np.array(posx))
+        total_posy.append(np.array(posy))
+        total_pot.append(np.max(potential)/ np.sqrt( np.power(np.array(posx)-x0,2.) + np.power(np.array(posy)-y0,2.))) #GM/r
+    np.save('/media/gravbox/G/orbit test/leapfrog_stepx.npy', np.array(total_posx))
+    np.save('/media/gravbox/G/orbit test/leapfrog_stepy.npy', np.array(total_posy))
+    np.save('/media/gravbox/G/orbit test/leapfrog_steppot.npy', np.array(total_pot))
+
+    #basisx = total_posx[0]; basisy = total_posy[0]
+
+    
 
 def pot_energy(pos1, pos2, mass):
     G = 1#28029.7740431#1#000

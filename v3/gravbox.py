@@ -62,8 +62,10 @@ cmap_viridis = np.load('./aux/cmap_viridis.npy')
 cmap_sauron = np.load('./aux/cmap_sauron.npy')
 cmap_geo = np.load('./aux/cmap_geo.npy')
 
-#fonts
 
+#fonts
+#droid_sans = QtGui.QFontDatabase.addApplicationFont('./aux/droid_font/DroidSans.ttf')
+#lato_reg = QtGui.QFontDatabase.addApplicationFont('./aux/lato_font/Lato-Regular.ttf')
 #lato_reg = QtGui.QFontDatabase.addApplicationFont('./aux/lato_font/Lato-Regular.ttf')
 
 class AboutScreen(QtGui.QWidget):
@@ -74,65 +76,108 @@ class AboutScreen(QtGui.QWidget):
         #self.setCentralWidget(self.mainbox)
         self.setLayout(QtGui.QGridLayout())
 
-        self.setGeometry(0,0,700,700)
+        self.setGeometry(0,0,900,700)
+
 
         '''self.bck = QtGui.QLabel(self)
-        self.bck.setPixmap(QtGui.QPixmap('./aux/starfield.png'))
-        self.bck.setGeometry(0,0,500,500)
-        self.bck.move(0,0)'''
-
-        
-        droid_sans = QtGui.QFontDatabase.addApplicationFont('./aux/droid_font/DroidSans.ttf')
-        lato_reg = QtGui.QFontDatabase.addApplicationFont('./aux/lato_font/Lato-Regular.ttf')
+        self.bck.setGeometry(0,0,900,800)
+        self.bck.setPixmap(QtGui.QPixmap('./aux/assets/starfield.png'))
+        self.bck.move(0,0)
+        self.bck.setScaledContents(True)'''
 
         self.aboutText = QtGui.QLabel(self)
-        self.rawtext = "GravBox is the interface application for the Augmented Reality (AR) \nSandbox for gravitational dynamics simulations designed and built \nby Dr. Hai Fu's Introduction to Astrophysics class during the 2016-\n2017 academic year and beyond.\n\nAR Sandbox is the result of an NSF-funded project on informal science \neducation for freshwater lake and watershed science developed by the \nUC Davis' W.M. Keck Center for Active Visualization in the Earth Scien-\nces (KeckCAVES), together with the UC Davis Tahoe Environmental Res-\nearch Center, Lawrence Hall of Science, and ECHO Lake Aquarium and \nScience Center."
+        self.rawtext = "\tGravBox is the Augmented Reality (AR) Sandbox for gravitational \n\tdynamics simulations designed and built by Dr. Hai Fu's Introd-\n\tuction to Astrophysics class during the 2016-2017 academic year \n\tand beyond.\n\n\tAR Sandbox is the result of an NSF-funded project on informal \n\tscience education for freshwater lake and watershed science \n\tdeveloped by the UC Davis' W.M. Keck Center for Active Visual-\n\tization in the Earth Sciences (KeckCAVES), together with the UC \n\tDavis Tahoe Environmental Research Center, Lawrence Hall of \n\tScience, and ECHO Lake Aquarium and Science Center."
         self.aboutText.setText(self.rawtext)
-        self.aboutText.move(0,30)
-        self.aboutText.setGeometry(50*2,30,600,600)
+        self.aboutText.setGeometry(0,0,850,800)
+        self.aboutText.move(75,0)
 
-        self.exit_button = QtGui.QPushButton('Close', self)
+        self.logo = QtGui.QLabel(self)
+        self.logo.setPixmap(QtGui.QPixmap('./aux/assets/icon.png'))
+        self.logo.setGeometry(0,0,100,100)
+        self.logo.move(440,100)
+        self.logo.setScaledContents(True)
+
+        self.exit_button = PicButton('Close', QtGui.QPixmap('./aux/assets/back.png'),self)
+        self.exit_button.setGeometry(0,0,125,50)
         self.exit_button.clicked.connect(self.exit_about)
-        self.exit_button.move(310,600)
-        self.setAutoFillBackground(True)
+        self.exit_button.move(425 + 425/2,600)
+
+        self.uiowa_button = QtGui.QPushButton('UIowa',self)
+        self.uiowa_button.setGeometry(0,0,125,50)
+        self.uiowa_button.clicked.connect(self.open_uiowa)
+        self.uiowa_button.move(425/2,600)
+
+        self.aboutText.setAutoFillBackground(True)
+
 
         #set the font
-        self.aboutText.setStyleSheet("QLabel {font-family:Droid Sans; font-size:16px;} QPushbutton {font-family:Droid Sans; font-size:14px;}")
+        self.aboutText.setStyleSheet("background-color:  #1b1c1d;  color:#fcfcff;font-size:22px; QLabel {font-family:Droid Sans; font-size:22px; color: #fcfcff;} QPushbutton {font-family:Droid Sans; font-size:14px;}")
 
      def exit_about(self):
         self.lower()
+
+     def open_uiowa(self):
+        self.lower()
+        self.parent().uiowa.raise_()
 
 
 class UIowaScreen(QtGui.QWidget):
      def __init__(self, parent=None):
         super(UIowaScreen,self).__init__(parent)
         #### Create Gui Elements ###########
+        #### Create Gui Elements ###########
         self.mainbox = QtGui.QWidget()
         #self.setCentralWidget(self.mainbox)
         self.setLayout(QtGui.QGridLayout())
 
-        self.setGeometry(0,0,500,500)
-
-        '''self.bck = QtGui.QLabel(self)
-        self.bck.setPixmap(QtGui.QPixmap('./aux/starfield.png'))
-        self.bck.setGeometry(0,0,500,500)
-        self.bck.move(0,0)'''
+        self.setGeometry(0,0,900,700)
 
         self.aboutText = QtGui.QLabel(self)
-        self.rawtext = "INFO ABOUT UIOWA"
+        self.rawtext = "\tGravBox was developed at the University of Iowa, and \n\twas supported by NSF-Grant ASTR-1614326 (PI: Hai Fu).\n\n    -Engineering Team: Wyatt Bettis, Sadie Moore, and Ross McCurty \n\n    -Interface Team: Zachary Luppen, Erin Maier, and Mason Reed \n\n    -Algorithm Team: Sophie Deam, Jacob Isbell, Jianbo Lu \n\n\tFollow the QR Code for more information about the University. "
         self.aboutText.setText(self.rawtext)
-        self.aboutText.move(0,30)
-        self.aboutText.setGeometry(50,30,400,400)
+        self.aboutText.setGeometry(0,0,850,800)
+        self.aboutText.move(75,0)
 
-        self.exit_button = QtGui.QPushButton('Close', self)
+        self.logo = QtGui.QLabel(self)
+        self.logo.setPixmap(QtGui.QPixmap('./aux/assets/icon.png'))
+        self.logo.setGeometry(0,0,100,100)
+        self.logo.move(440,100)
+        self.logo.setScaledContents(True)
+
+        self.tiger = QtGui.QLabel(self)
+        self.tiger.setPixmap(QtGui.QPixmap('./aux/assets/herkylogo.png'))
+        self.tiger.setGeometry(0,0,150,100)
+        self.tiger.move(440/2-25,100)
+        self.tiger.setScaledContents(True)
+
+        self.qr = QtGui.QLabel(self)
+        self.qr.setPixmap(QtGui.QPixmap('./aux/assets/qrcode.png'))
+        self.qr.setGeometry(0,0,100,100)
+        self.qr.move(440+440/2,100)
+        self.qr.setScaledContents(True)
+
+        self.exit_button = PicButton('Close', QtGui.QPixmap('./aux/assets/back.png'),self)
+        self.exit_button.setGeometry(0,0,125,50)
         self.exit_button.clicked.connect(self.exit_about)
-        self.exit_button.move(210,400)
-        self.setAutoFillBackground(True)
-        #set the font
+        self.exit_button.move(425+425/2,600)
 
+        self.uiowa_button = QtGui.QPushButton('About',self)
+        self.uiowa_button.setGeometry(0,0,125,50)
+        self.uiowa_button.clicked.connect(self.open_uiowa)
+        self.uiowa_button.move(425/2,600)
+
+        self.aboutText.setAutoFillBackground(True)
+
+
+        #set the font
+        self.aboutText.setStyleSheet("background-color:  #1b1c1d;  color:#fcfcff;font-size:22px; QLabel {font-family:Droid Sans; font-size:22px; color: #fcfcff;} QPushbutton {font-family:Droid Sans; font-size:14px;}")
 
      def exit_about(self):
         self.lower()
+
+     def open_uiowa(self):
+        self.lower()
+        self.parent().about.raise_()
 
 
 class WelcomeScreen(QtGui.QWidget):
@@ -147,7 +192,7 @@ class WelcomeScreen(QtGui.QWidget):
 
         ###LAYOUT THE DSIPLAY ###
         self.bck=QtGui.QLabel(self)
-        self.bck.setPixmap(QtGui.QPixmap('./aux/welcome.png')) #get higher resolution image
+        self.bck.setPixmap(QtGui.QPixmap('./aux/assets/homescreen.png')) #get higher resolution image
         self.bck.setGeometry(0,0,1920,1080)
         self.bck.setScaledContents(True)
         self.bck.setMinimumSize(1,1)
@@ -379,7 +424,7 @@ class Surface(QtGui.QWidget):
         self.lut2c = self.cmap2.getLookupTable(0.1,.95,512)
 
         r4 = cmap_sauron#[::-1]
-        pos4 = np.linspace(0.2,.95,len(r4)-1)#np.array([0.]+[.05*np.power(2,k) for k in range(len(r4)-2)])/2.+.3 #np.linspace(0.2,.95,len(r4)-1)
+        pos4 = np.linspace(0.05,.9,len(r4)-1)#np.array([0.]+[.05*np.power(2,k) for k in range(len(r4)-2)])/2.+.3 #np.linspace(0.2,.95,len(r4)-1)
         pos4= np.append(pos4, np.array([-1]))
         #pos4 = np.linspace(.8,-.3,len(r4)-1)
         #pos4= np.append(pos4, np.array([np.nan]))
@@ -393,7 +438,7 @@ class Surface(QtGui.QWidget):
         pos5 = np.append(pos5,np.array([-1]))
         self.cmap5 = pg.ColorMap(pos5,r5)
         self.lut5 = self.cmap5.getLookupTable()
-        self.lut5c = self.cmap5.getLookupTable(.1,1.1)
+        self.lut5c = self.cmap5.getLookupTable(.05,1.05)
 
 
         #black
@@ -432,7 +477,7 @@ class Surface(QtGui.QWidget):
         for v in self.pdi_list:
             self.view.addItem(v)
 
-        self.tracex = []; self.tracey = []
+        self.tracex = [0]; self.tracey = [0]
         self.pressed =False; self.moved = False
         self.xlow = 0; self.ylow = 0
         self.xhigh = 0; self.yhigh = 0
@@ -452,10 +497,8 @@ class Surface(QtGui.QWidget):
             for i in range(len(self.pdi_list)):
                 v = self.pdi_list[i]
                 v.setData(x[i*num_vals:(i+1)*num_vals], y[i*num_vals:(i+1)*num_vals])
-            if TRACE_BOOL:
-                #v = self.pdi_list[0]
+            if TRACE_BOOL and not self.parent().gravity_thread.idle:
                 i=1
-                #v.setData(np.append(x[i*num_vals:(i+1)*num_vals],self.tracex), np.append(y[i*num_vals:(i+1)*num_vals],self.tracey))
                 self.tracex = np.append(x[i*num_vals:(i+1)*num_vals:5],self.tracex)[::]#np.append(x,self.tracex)[::5]
                 self.tracey = np.append(y[i*num_vals:(i+1)*num_vals:5],self.tracey)[::]#np.append(y,self.tracey)[::5]
                 if len(self.tracex) > 10000:
@@ -472,27 +515,17 @@ class Surface(QtGui.QWidget):
                 v.setData(x[i*num_vals:(i+1)*num_vals], y[i*num_vals:(i+1)*num_vals])
         
     def _update_bg(self, bg, stretch=False):
-        #bg[0,0] = -600
-        #bg[0,1] = 15
         self.data = np.rot90(bg,1)
         if self.imap == 3:
             self.data = np.zeros(bg.shape)-1.
             self.data = np.rot90(self.data)
-
-
-        
+ 
         if TRACE_BOOL:
-            self.data[self.tracex.astype(int),self.tracey.astype(int)] = 0.
-            #self.data = np.rot90(bg,1)
+            if len(self.tracex) > 1:
+                self.data[np.nan_to_num(self.tracex).astype(int),np.nan_to_num(self.tracey).astype(int)] = 0.
+
 
         self.img.setImage(self.data)
-        '''if lutval != self.lutval:
-            self.lutval = lutval
-            if self.lutval == 1:
-                self.img.setLookupTable(self.lut2)
-            elif self.lutval == 2:
-                self.img.setLookupTable(self.lut3)
-        '''
 
         if args.cont_on:
             self.mk_contours_thread.update_bg(bg)
@@ -526,11 +559,14 @@ class Surface(QtGui.QWidget):
                 self.start_pos = [(pos.x()-22)/1500., (pos.y()-10)/1140.]
                 self.parent().start_pos = self.start_pos
                 print pos.x(), pos.y(), 'click click mfer'
+                self.parent().toggle_trace()
                 self.emit(QtCore.SIGNAL('clear data'))
 
             elif self.pressed:
                 self.pressed=False
                 self.end_pos = [(pos.x()-22)/1500., (pos.y()-10)/1140.]
+                print 'Trace bool value', TRACE_BOOL
+                self.tracex= []; self.tracey=[]
                 self.emit(QtCore.SIGNAL('clear data'),self.start_pos)
                 #send a signal to parent with start and end positions
                 self.emit(QtCore.SIGNAL('start_computation'), [self.start_pos, self.end_pos])
@@ -638,337 +674,6 @@ class Settings(QtGui.QWidget):
         self.parent().need_new =True
 
 
-"""
-class Display(QtGui.QWidget):
-    def __init__(self, parent=None):
-        super(Display,self).__init__(parent)
-        #### Create Gui Elements ###########
-        self.mainbox = QtGui.QWidget()
-        #self.setCentralWidget(self.mainbox)
-        self.setLayout(QtGui.QGridLayout())
-        self.setCursor(QtCore.Qt.CrossCursor)
-        self.setMouseTracking(True)
-        self.setGeometry(0,0,1920+1280,1080)
-        self.setFocus()
-
-        ###LAYOUT THE DSIPLAY ###
-        self.bck=QtGui.QLabel(self)
-        self.bck.setPixmap(QtGui.QPixmap('./aux/starfield.png'))
-        self.bck.setGeometry(0,0,1920,1080)
-        self.bck.setScaledContents(True)
-        self.bck.setMinimumSize(1,1)
-        self.bck.move(0,0)
-
-        ### HELPER WIDGETS ####
-        self.home = WelcomeScreen(self)
-        self.home.move(0,0)
-        self.about = AboutScreen(self)
-        self.about.move(1920/2. -250,1080/2.-250)
-        self.uiowa = UIowaScreen(self)
-        self.uiowa.move(1920/2. -250,1080/2.-250)
-
-        ### PLOTTING WIDGET(S) ####
-        self.lmargin = 0; self.rmargin = 30; self.tmargin = -5; self.bmargin = 40;
-        self.xstart = -40; self.ystart = -20; self.xspan = 1280; self.yspan = 860
-        self.surface1 = Surface(self, aspectLock=False)#, lmargin=self.lmargin,rmargin=self.rmargin, tmargin=self.tmargin, bmargin=self.bmargin, xstart=self.xstart,ystart=self.ystart,xspan=self.xspan,yspan=self.yspan)#Surface(self)
-        self.surface2 = Surface(self, aspectLock=False, lmargin=self.lmargin,rmargin=self.rmargin, tmargin=self.tmargin, bmargin=self.bmargin, xstart=self.xstart,ystart=self.ystart,xspan=self.xspan,yspan=self.yspan)#surface1
-        self.surface1.move(186,-42)
-        self.surface1.raise_()
-        self.surface2.move(1920-30,-20)
-        self.surface2.lower()
-        self.need_new =False
-
-
-        #### BUTTONS ######
-        self.trail_button = QtGui.QPushButton('Trail', self)
-        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
-        self.trail_button.clicked.connect(self.start_trace)
-        self.trail_button.move(1280+480,540)
-
-        self.cmap_button = QtGui.QPushButton('ColorMap', self)
-        self.menu = QtGui.QMenu()
-        #self.menu.addAction('Contours',self.set_cont)
-        self.menu.addAction('Default', self.set_nocont)
-        self.menu.addAction('Sauron', self.set_sauron)
-        self.menu.addAction('Viridis', self.set_viridis)
-        self.menu.addAction('Geology', self.set_geo)
-        self.menu.addAction('Black', self.set_black)
-        self.cmap_button.setMenu(self.menu)
-        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
-        self.cmap_button.clicked.connect(self.handleButton)
-        self.cmap_button.move(1280+480,270)
-
-        self.clear_button = QtGui.QPushButton('Clear', self)
-        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
-        self.clear_button.clicked.connect(self.end_trace)
-        self.clear_button.move(1280+480,540+270)
-
-        self.about_button = QtGui.QPushButton('About', self)
-        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
-        self.about_button.clicked.connect(self.open_about)
-        self.about_button.move(70,360)
-
-        self.sarndbox_button = QtGui.QPushButton('SARndbox', self)
-        #self.button = PicButton('grav_button.png','grav_hover.png','grav_click.png')
-        self.sarndbox_button.clicked.connect(self.start_sarndbox)
-        self.sarndbox_button.move(70,720)
-
-        
-
-        self.templbl = QtGui.QLabel(self)
-        self.templbl.setAutoFillBackground(True)
-        self.templbl.setGeometry(0,0,80,30)
-        self.templbl.move(1280+480,225)
-
-        self.contour_toggle = QtGui.QCheckBox('Contours', self)
-        self.contour_toggle.setChecked(True)
-        self.contour_toggle.stateChanged.connect(self.toggle_conts)
-        self.contour_toggle.move(1280+480, 230)
-
-
-        #set the fonts of the buttons!
-
-        #aboutText = QtGui.QLabel()
-
-        if args.calibrate:
-            self.settings = Settings(self)
-            self.settings.move(300,300)
-            self.settings.raise_()
-        
-
-        self.pressed=False; self.moved=False  
-
-        '''
-        #Adjust margins to align stuff.
-        #Order is left, top, right, bottom. 
-        '''
-        self.leftmargin = 240 ; self.topmargin = 30; self.rightmargin =240; self.bottommargin = 30
-        self.setContentsMargins(self.leftmargin, self.topmargin, self.rightmargin, self.bottommargin)
-
-        self.setWindowFlags(self.windowFlags() | QtCore.Qt.FramelessWindowHint)
-        self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
-        
-        
-        #start the computation thread
-        self.gravity_thread = GravityThread()
-        self.connect(self.gravity_thread, QtCore.SIGNAL('stage_data'), self.stage_data)
-        self.gravity_thread.start()
-        self.calc_idle = True
-
-        self.connect(self.surface1, QtCore.SIGNAL('start_computation'), self.start_computation)
-        self.connect(self.surface1, QtCore.SIGNAL('clear_data'), self.clear_data)       
-
-        self.counter = 0
-        self.fps = 0. 
-        self.lastupdate = time.time()
-
-        #initial values##
-        self.x = []; self.y = []; self.data = []
-        self.newx = []; self.newy = []; self.newbg = []
-        self.xlow = 400; self.ylow = 100
-        self.xhigh = 400+1280; self.yhigh = 100+960
-        self.start_pos = []
-        self.current_pos = []
-        
-        #### Start  #####################
-        self.setMouseTracking(True)
-        self.pp = QtGui.QCursor()
-        self.start = time.time()
-        self.home.raise_()
-        self.about.lower()
-        #self.home.close()
-        self._update()
-
-
-
-    def keyPressEvent(self, e):
-        if e.key() == QtCore.Qt.Key_Escape:
-            self.close()
-            sys.exit()
-    def handleButton(self):
-        print ('Hello World')
-        if self.lutval == 1:
-            self.img.setLookupTable(self.lut2)
-            self.lutval = 2
-        else:
-            self.img.setLookupTable(self.lut)
-            self.lutval = 1
-
-    def set_black(self):
-        self.surface1.set_cmap(3)
-        self.surface2.set_cmap(3)
-    def set_nocont(self):
-        self.surface1.set_cmap(0)
-        self.surface2.set_cmap(0)
-    def set_sauron(self):
-        self.surface1.set_cmap(2)
-        self.surface2.set_cmap(2)
-    def set_viridis(self):
-        self.surface1.set_cmap(1)
-        self.surface2.set_cmap(1)
-    def set_geo(self):
-        self.surface1.set_cmap(4)
-        self.surface2.set_cmap(4)
-    def toggle_conts(self):
-        val = self.contour_toggle.isChecked()
-        global CONTOURS_ON
-        CONTOURS_ON = val
-        self.surface1.set_cmap(self.surface1.imap)
-
-
-    def open_about(self):
-        self.about.raise_()
-
-        
-    def start_sarndbox(self):
-        print 'call whatever starts the sarndbox'
-        #call('/home/gravbox/src/SARndbox-2.3/bin/SARndbox -uhm -fpv -rs 0.0&', shell=True)
-        sys.exit(2)
-
-    def start_trace(self):
-        global TRACE_BOOL
-        TRACE_BOOL = True
-        self.tracex = []; self.tracey = []
-
-    def end_trace(self):
-        global TRACE_BOOL
-        TRACE_BOOL = False
-        self.tracex = []; self.tracey = []
-
-
-    def mouseMoveEvent(self, e):
-        #constrain the mouse cursor?
-        pos = e.pos()
-        if pos.x() > 1920:
-            self.pp.setPos(1920,pos.y())
-
-#will need to be rescaled
-
-    def setMouseTracking(self, flag):
-        def recursive_set(parent):
-            for child in parent.findChildren(QtCore.QObject):
-                try:
-                    child.setMouseTracking(flag)
-                except:
-                    pass
-                recursive_set(child)
-        QtGui.QWidget.setMouseTracking(self, flag)
-        recursive_set(self)
-            
-
-    def new_MouseClickEvent(self, e):
-        if e.button() == QtCore.Qt.RightButton:
-            e.accept()
-
-    def start_computation(self, arr):
-        self.start_pos = arr[0]; self.end_pos = arr[1]
-        self.gravity_thread.read_input([self.start_pos[0],self.start_pos[1],self.end_pos[0],self.end_pos[1]],args.vel_scaling)
-        self.mainbox.setCursor(QtCore.Qt.WaitCursor)
-        self.surface1._update_pos([],[])
-        self.surface2._update_pos([],[])
-        x_scaled = self.newx* YWIDTH - 7
-        self.x =  np.log( np.zeros(len(x_scaled))-1)
-        self.y = np.copy(self.x)
-        self.newx = []; self.newy = []
-        self.counter = -1
-        self.start = time.time()
-        self.mainbox.setCursor(QtCore.Qt.CrossCursor)
-        self.pressed = False; self.moved=False
-        self.tracex = []
-        self.tracey = []
-        global TRACE_LENGTH
-        TRACE_LENGTH = 0
-
-    def clear_data(self):
-        self.surface1._update_pos([0],[0])
-        self.surface2._update_pos([0],[0])
-        self.tracex = []
-        self.tracey = []
-        self.x = []
-        self.y = []
-        global TRACE_LENGTH
-        TRACE_LENGTH = 0
-        self.pressed = True
-
-        #self.surface1.close()
-        #self.surface1 = Surface(self)
-        #self.surface1.move(400,100)
-
-
-    def stage_data(self, data):
-        if len(self.newx) <1:
-            self.counter = 0
-        self.newx, self.newy, self.newbg, self.calc_idle = data
-        #self.newy = self.newy+1
-
-    def _update(self):
-        if self.counter >= 0:
-
-          if self.need_new:
-            #self.surface1.close()
-            self.surface2.setGeometry(1920+self.xstart,0+self.ystart, self.xspan, self.yspan)
-            self.surface2.setContentsMargins(self.lmargin,self.tmargin, self.rmargin, self.bmargin)
-            self.surface2.update()
-            #self.surface1.raise_()
-            self.update()
-            self.need_new= False
-          #print self.pp.pos().x()
-          #print self.y; self.x
-          if not self.pressed:
-            self.surface1._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
-            self.surface2._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
-
-          if self.pressed:
-            #print self.pp.pos(), 'this'
-            self.current_pos = [(self.pp.pos().x()-206)/float(1508.), (self.pp.pos().y())/float(1080.)]
-            
-            #print self.current_pos, self.start_pos
-
-            self.surface1._update_pos([YWIDTH-self.start_pos[0]*YWIDTH,YWIDTH-self.current_pos[0]*YWIDTH],[self.start_pos[1]*XWIDTH,self.current_pos[1]*XWIDTH],color='r')
-            self.surface2._update_pos([580*2-self.start_pos[0]*580*2,580-self.current_pos[0]*580],[self.start_pos[1]*410,self.current_pos[1]*410],color='r')
-
-          QtCore.QTimer.singleShot(6.5, self._update)
-          self.counter += 1
-          
-          #staggered loading of data
-          if self.counter == len(self.newx)-50:
-            x_scaled = self.newx* YWIDTH #- 7
-            y_scaled = YWIDTH- (self.newy * XWIDTH) #- 12
-            self.x = np.append(self.x, x_scaled)
-            self.y = np.append(self.y, y_scaled)
-            #print x_scaled[0], y_scaled[0]
-            print 'updating'
-          if self.counter == len(self.newx)-20:
-            bg = self.newbg / scaling
-            #bg[0,0] = 600
-            #bg[0,1] = -5
-            self.data = np.rot90(bg,1)
-            self.surface1._update_bg(bg)
-            self.surface2._update_bg(bg,stretch=True)
-            
-          if self.counter >= len(self.newx):
-            if TRACE_BOOL == False:
-                self.tracex = []
-                self.tracey = []
-                global TRACE_LENGTH
-                TRACE_LENGTH = 0
-            try:
-                print time.time() - self.start,  'ANIMATING TOOK'
-                time.sleep(.9 - (time.time() - self.start))
-                self.counter = 0
-                self.x = self.x[100:]
-                self.y = self.y[100:]
-                self.start = time.time()
-            except:
-                self.counter = 0
-                print time.time() - self.start,  'ANIMATING TOOK'
-                self.x = self.x[100:]
-                self.y = self.y[100:]
-                self.start = time.time()
-        else:
-            QtCore.QTimer.singleShot(1, self._update) 
-"""
-
 class PicButton(QtGui.QPushButton):
     def __init__(self,text, pixmap, parent=None):
         super(PicButton, self).__init__(parent)
@@ -1021,9 +726,9 @@ class Display(QtGui.QWidget):
         self.home = WelcomeScreen(self)
         self.home.move(0,0)
         self.about = AboutScreen(self)
-        self.about.move(1920/2. -250,1080/2.-250)
+        self.about.move(1920/2. -350,1080/2.-350)
         self.uiowa = UIowaScreen(self)
-        self.uiowa.move(1920/2. -250,1080/2.-250)
+        self.uiowa.move(1920/2. -350,1080/2.-350)
 
         ### PLOTTING WIDGET(S) ####
         self.lmargin = 0; self.rmargin = 30; self.tmargin = -5; self.bmargin = 40;
@@ -1086,22 +791,6 @@ class Display(QtGui.QWidget):
         self.sarndbox_button.setStyleSheet('font-size:24px;')
         self.sarndbox_button.move(80,900-50)
 
-        
-
-        '''self.templbl = QtGui.QLabel(self)
-        self.templbl.setAutoFillBackground(True)
-        self.templbl.setGeometry(0,0,80,30)
-        self.templbl.move(80,155)
-
-        self.contour_toggle = QtGui.QCheckBox('Contours', self)
-        self.contour_toggle.setChecked(True)
-        self.contour_toggle.stateChanged.connect(self.toggle_conts)
-        self.contour_toggle.move(80, 160)'''
-
-
-        #set the fonts of the buttons!
-
-        #aboutText = QtGui.QLabel()
 
         if args.calibrate:
             self.settings = Settings(self)
@@ -1215,22 +904,22 @@ class Display(QtGui.QWidget):
         #call('/home/gravbox/src/SARndbox-2.3/bin/SARndbox -uhm -fpv -rs 0.0&', shell=True)
         sys.exit(2)
 
-    def start_trace(self):
-        global TRACE_BOOL
-        TRACE_BOOL = True
-        self.tracex = []; self.tracey = []
-
-    def end_trace(self):
-        global TRACE_BOOL
-        TRACE_BOOL = False
-        self.tracex = []; self.tracey = []
-        self.gravity_thread.idle = True
-        self.surface1._update_pos([0],[0])
-        self.surface2._update_pos([0],[0])
-        self.x = []
-        self.y = []
-        global TRACE_LENGTH
-        TRACE_LENGTH = 0
+    '''def start_trace(self):
+                    global TRACE_BOOL
+                    TRACE_BOOL = True
+                    self.tracex = []; self.tracey = []
+            
+                def end_trace(self):
+                    global TRACE_BOOL
+                    TRACE_BOOL = False
+                    self.tracex = []; self.tracey = []
+                    self.gravity_thread.idle = True
+                    self.surface1._update_pos([0],[0])
+                    self.surface2._update_pos([0],[0])
+                    self.x = []
+                    self.y = []
+                    global TRACE_LENGTH
+                    TRACE_LENGTH = 0'''
 
 
     def mouseMoveEvent(self, e):
@@ -1271,17 +960,16 @@ class Display(QtGui.QWidget):
         self.start = time.time()
         self.mainbox.setCursor(QtCore.Qt.CrossCursor)
         self.pressed = False; self.moved=False
-        self.tracex = []
-        self.tracey = []
-        global TRACE_LENGTH
-        TRACE_LENGTH = 0
+        #self.tracex = []
+        #self.tracey = []
+        #global TRACE_LENGTH
+        #TRACE_LENGTH = 0
 
     def clear_data(self):
         self.surface1._update_pos([0],[0])
         self.surface2._update_pos([0],[0])
-        time.sleep(.5)
-        self.tracex = []
-        self.tracey = []
+        self.surface1.tracex = []; self.surface1.tracey = []
+        #time.sleep(.5)
         self.x = []
         self.y = []
         global TRACE_LENGTH
