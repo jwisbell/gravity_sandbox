@@ -1,9 +1,0 @@
-import pyqtgraph as pg
-# make plot with a line drawn in
-plt = pg.plot([1,5,2,4,3,2], pen='r')
-
-# add an image, scaled
-img = pg.ImageItem(np.random.normal(size=(100,100)))
-img.scale(0.2, 0.1)
-img.setZValue(-100)
-plt.addItem(img)
