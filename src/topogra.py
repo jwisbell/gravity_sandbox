@@ -9,7 +9,6 @@ Version 1.0 - December 2017
 from freenect import sync_get_depth as get_depth
 import numpy as np
 import scipy.linalg
-import functools
 import scipy.optimize
 
 

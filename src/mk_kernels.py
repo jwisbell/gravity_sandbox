@@ -8,9 +8,8 @@ Version 1.0 - December 2017
 """
 
 import numpy as np
-from astropy.io import fits
 from scipy.ndimage.interpolation import shift
-import pyfftw
+#import pyfftw
 import time
 import matplotlib.pyplot as plt
 
