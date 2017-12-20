@@ -1,5 +1,16 @@
+"""
+Software to load FFTW wisdoms for Gravbox, an Augmented Reality Gravitational Dynamics Simulation. 
+Currently NOT IN USE, but leaving in case user wants to enable FFTW mode in convolution.py
+I DO NOT GUARANTEE THE EFFICACY OF THIS SCRIPT -- DEPRECATED
+
+This was developed at the University of Iowa by Jacob Isbell
+    based on work in Dr. Fu's Introduction to Astrophysics class by Jacob Isbell, Sophie Deam, Jianbo Lu, and Tyler Stercula (beta version)
+Version 1.0 - December 2017
+"""
+
 import string
 
+#load the fftw plan
 def load_wisdom():
     f = open('forward_plan.txt','r')
     plan = ''
@@ -7,7 +18,7 @@ def load_wisdom():
         plan = plan+l
     return plan
 
-
+#parse the fftw plan and return 
 def read_wisdom(fname):
     f = open(fname+'_0.txt')
     lines = f.readlines()
@@ -31,8 +42,5 @@ def read_wisdom(fname):
     f.close()
 
     return [part1,part2,part3]
-#print read_wisdom()
-#print part1
-#print part2
-#print part3
+
 

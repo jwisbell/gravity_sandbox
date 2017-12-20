@@ -1,40 +1,48 @@
+"""
+GUI software for Gravbox, an Augmented Reality Gravitational Dynamics Simulation. 
+This was developed at the University of Iowa by Jacob Isbell
+    based on work in Dr. Fu's Introduction to Astrophysics class by Jacob Isbell, Sophie Deam, Jianbo Lu, and Tyler Stercula (beta version)
+Version 1.0 - December 2017
+"""
 import sys
 import time
 from pyqtgraph.Qt import QtCore, QtGui
-#from pyqtgraph.Qt.QtCore import QThread, SIGNAL
 import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.exporters
 from subprocess import call
 from skimage import measure
+from argparse import ArgumentParser
+
+#custom scripts to import specific functions
 import gravity_algorithm
 import convolution
 import topogra as topo
-from argparse import ArgumentParser
 import mk_kernels
 
 
-start = time.time()
-end = time.time()
-scaling = 40 * 10
-YWIDTH = 580.#480.
-XWIDTH = 410.#600#640.
-y0 = 0#60.+40#-10#/2.
-x0 = 186+18#15#2.
-XWINDOW = 640.*2   
-YWINDOW = 512.*2 
-#xscale = 600.*2.055 ; yscale = 495.*2.045
-xscale = 600.*2.008 ; yscale = 495.*2.003
+### --------- CONSTANTS --------- ###
+scaling = 40 * 10 #scaling factor for representation of topography
+YWIDTH = 580.# width of the plot for animation
+XWIDTH = 410.# height of the plot for animation
+y0 = 0# top boundary of plot
+x0 = 186+18# left boundary of plot
 
-# ----- INITIAL VALUES AND CONSTANTS -------------
-X_KERNEL =  np.load('./aux/dx_dft.npy')#fits.getdata('./aux/dx_kernel.fits',0)  ##
-Y_KERNEL = np.load('./aux/dy_dft.npy') #fits.getdata('./aux/dy_kernel.fits',0) #
-
+#convolution kernels
+X_KERNEL =  np.load('./aux/dx_dft.npy')
+Y_KERNEL = np.load('./aux/dy_dft.npy') 
+#toggles for tracing and contours
 TRACE_BOOL = False
 TRACE_LENGTH = 0
 CONTOURS_ON = True
+#colormaps
+cmap_jet = np.load('./aux/cmap_jet.npy')
+cmap_viridis = np.load('./aux/cmap_viridis.npy')
+cmap_sauron = np.load('./aux/cmap_sauron.npy')
+cmap_geo = np.load('./aux/cmap_geo.npy')
 
 
+#I think this can be removed
 def load_data():
     """Load the output from the orbit calculation. If there is currently no file, wait indefinitely. """ 
     i = 0
@@ -55,35 +63,15 @@ def load_data():
 
 x, y, bg = load_data()
 
-
-#cmap_jet = np.load('./aux/jet_cmap.npy')
-cmap_jet = np.load('./aux/cmap_jet.npy')#np.load('./aux/jet_cmap.npy')
-cmap_viridis = np.load('./aux/cmap_viridis.npy')
-cmap_sauron = np.load('./aux/cmap_sauron.npy')
-cmap_geo = np.load('./aux/cmap_geo.npy')
-
-
-#fonts
-#droid_sans = QtGui.QFontDatabase.addApplicationFont('./aux/droid_font/DroidSans.ttf')
-#lato_reg = QtGui.QFontDatabase.addApplicationFont('./aux/lato_font/Lato-Regular.ttf')
-#lato_reg = QtGui.QFontDatabase.addApplicationFont('./aux/lato_font/Lato-Regular.ttf')
-
+"""Class containing the popup window with "about" information. Called from WelcomeScreen or Display. Not deleted on exit, just pushed to back. """
 class AboutScreen(QtGui.QWidget):
      def __init__(self, parent=None):
         super(AboutScreen,self).__init__(parent)
         #### Create Gui Elements ###########
         self.mainbox = QtGui.QWidget()
-        #self.setCentralWidget(self.mainbox)
         self.setLayout(QtGui.QGridLayout())
 
         self.setGeometry(0,0,900,700)
-
-
-        '''self.bck = QtGui.QLabel(self)
-        self.bck.setGeometry(0,0,900,800)
-        self.bck.setPixmap(QtGui.QPixmap('./aux/assets/starfield.png'))
-        self.bck.move(0,0)
-        self.bck.setScaledContents(True)'''
 
         self.aboutText = QtGui.QLabel(self)
         self.rawtext = "\tGravBox is the Augmented Reality (AR) Sandbox for gravitational \n\tdynamics simulations designed and built by Dr. Hai Fu's Introd-\n\tuction to Astrophysics class during the 2016-2017 academic year \n\tand beyond.\n\n\tAR Sandbox is the result of an NSF-funded project on informal \n\tscience education for freshwater lake and watershed science \n\tdeveloped by the UC Davis' W.M. Keck Center for Active Visual-\n\tization in the Earth Sciences (KeckCAVES), together with the UC \n\tDavis Tahoe Environmental Research Center, Lawrence Hall of \n\tScience, and ECHO Lake Aquarium and Science Center."
@@ -108,26 +96,24 @@ class AboutScreen(QtGui.QWidget):
         self.uiowa_button.move(425/2,600)
 
         self.aboutText.setAutoFillBackground(True)
-
-
         #set the font
         self.aboutText.setStyleSheet("background-color:  #1b1c1d;  color:#fcfcff;font-size:22px; QLabel {font-family:Droid Sans; font-size:22px; color: #fcfcff;} QPushbutton {font-family:Droid Sans; font-size:14px;}")
 
      def exit_about(self):
+        #don't delete the element, hide it behind the others for fast loading and constant memory use
         self.lower()
 
      def open_uiowa(self):
+        #open the uiowa popup window by placing it on top of this one. Send this window to the back.
         self.lower()
         self.parent().uiowa.raise_()
 
-
+"""Class containing the popup window with information about the team. Called from WelcomeScreen or About. Not deleted on exit, just pushed to back. """
 class UIowaScreen(QtGui.QWidget):
      def __init__(self, parent=None):
         super(UIowaScreen,self).__init__(parent)
         #### Create Gui Elements ###########
-        #### Create Gui Elements ###########
         self.mainbox = QtGui.QWidget()
-        #self.setCentralWidget(self.mainbox)
         self.setLayout(QtGui.QGridLayout())
 
         self.setGeometry(0,0,900,700)
@@ -168,31 +154,33 @@ class UIowaScreen(QtGui.QWidget):
 
         self.aboutText.setAutoFillBackground(True)
 
-
         #set the font
         self.aboutText.setStyleSheet("background-color:  #1b1c1d;  color:#fcfcff;font-size:22px; QLabel {font-family:Droid Sans; font-size:22px; color: #fcfcff;} QPushbutton {font-family:Droid Sans; font-size:14px;}")
 
      def exit_about(self):
+        #don't delete the element, hide it behind the others for fast loading and constant memory use
         self.lower()
 
      def open_uiowa(self):
+        #open the uiowa popup window by placing it on top of this one. Send this window to the back.
         self.lower()
         self.parent().about.raise_()
 
-
+"""Upon initialization of Display element, place this 'splash' image on top. Approximate buttons by screen regions. 
+If 'start your journey' region is clicked, simply hide this element in the back. If 'About' is clicked, hide this and raise the AboutScreen widget.
+If 'UIowa' is clicked, hide this and raise UIowaScreen widget. Finally, when the program goes to idle mode place this back on top. """
 class WelcomeScreen(QtGui.QWidget):
     def __init__(self, parent=None):
         super(WelcomeScreen,self).__init__(parent)
         #### Create Gui Elements ###########
         self.mainbox = QtGui.QWidget()
-        #self.setCentralWidget(self.mainbox)
         self.setLayout(QtGui.QGridLayout())
 
         self.setGeometry(0,0,1920,1080)
 
         ###LAYOUT THE DSIPLAY ###
         self.bck=QtGui.QLabel(self)
-        self.bck.setPixmap(QtGui.QPixmap('./aux/assets/homescreen.png')) #get higher resolution image
+        self.bck.setPixmap(QtGui.QPixmap('./aux/assets/homescreen.png')) #Created by Jeremy Swanson
         self.bck.setGeometry(0,0,1920,1080)
         self.bck.setScaledContents(True)
         self.bck.setMinimumSize(1,1)
@@ -209,6 +197,7 @@ class WelcomeScreen(QtGui.QWidget):
 
 
     def mousePressEvent(self, QMouseEvent):
+        #define the regions that approximate buttons
         if QMouseEvent.button() == QtCore.Qt.LeftButton:
             pos = QMouseEvent.pos()
 
@@ -227,47 +216,51 @@ class WelcomeScreen(QtGui.QWidget):
                 self.lower()
         
                 
-
+""" 'Powerhouse' thread that handles updating topography and calls gravity_algorithm to calculate orbits using Verlet Integration. """
 class GravityThread(QtCore.QThread):
     def __init__(self):
         QtCore.QThread.__init__(self)
-        self.current_pos = [300,212]
+        #initial values
+        self.current_pos = [0,0]
         self.current_vel = [0,0]
         self.previous_pos = np.copy(self.current_pos)
         self.previous_vel = np.copy(self.current_vel)
         self.in_pos = np.copy(self.previous_pos)
         self.in_vel = np.copy(self.previous_vel)
-        self.baseplane,self.bounds = topo.ar_calibration()#topo.generate_baseplane()
-        #update the kernel size for calibration settings
-        print 'baseplane shape', self.baseplane.shape
-        if args.calibrate == True: 
+        self.baseplane,self.bounds = topo.ar_calibration()
+
+        #update the kernel size for calibration settings, only if calibration flag is called
+        if args.calibrate == True:
+            print 'baseplane shape', self.baseplane.shape 
             mk_kernels.make(self.baseplane.shape[0],self.baseplane.shape[1])
-        #self.prev_dem = np.load('display_dem.npy')
+        #save the previous topography in case there's too large a change in the values, then revert to previous topgraphy
         self.prev_dem = topo.update_surface(self.baseplane,self.bounds, None)
+        #initially not doing calculation, this is 'idle' mode
         self.idle = True
+
     def __del__(self):
         self.wait()
+
     def differ(self,arr1, arr2):
+        #function to see if input parameters vary from previous values
+        #if return True, start a new orbit
+        #if return False, continue old orbit
         for k in range(len(arr1)):
             if arr1[k] != arr2[k]:
                 return True
         return False
-    def loading_circle(self):
-        t = np.linspace(0,np.pi*2, 200)
-        r = 10
-        x = r * np.cos(t) + 410/2
-        y = r * np.sin(t) + 580/2
-        return x,y
+    
     def run(self):
-        last_idle = time.time()
+        #computation loop. Called immediately after __init__() to start thread
+
+        last_idle = time.time() #time that idle mode ended, for use in checking elapsed time
         while True:
+            start_loop = time.time()
             if not self.idle:
                 # Load in surface
-                start_loop = time.time()
-                #scaled_dem_array = np.load('display_dem.npy')
                 scaled_dem_array = topo.update_surface(self.baseplane,self.bounds, self.prev_dem, verbose=True) 
                 self.prev_dem = scaled_dem_array
-                #scaled_dem_array = scaled_dem_array[40:-30, 30:-30] 
+                
                 xw = scaled_dem_array.shape[1]; yw = scaled_dem_array.shape[0]
                 
                 """CONVOLVE THE DEM-DENSITY FIELD WITH THE PLUMMER KERNEL"""
@@ -302,36 +295,44 @@ class GravityThread(QtCore.QThread):
                     y = np.asarray(posy)/scaled_dem_array.shape[0]
                     x = x[::15]
                     y = y[::15]
-                #print 'has it even gotten here?', x
-                #sys.exit()
+                
+                #normalize topography [0,1]
                 scaled_dem_array = self.normalize_bg(scaled_dem_array)
                 if CONTOURS_ON:
-                    scaled_dem_array = self.make_contours(scaled_dem_array) 
+                    #contours are defined as negative values
+                    scaled_dem_array = self.make_contours(scaled_dem_array)
+
+                #send orbit data and topography to main thread for display and animation
                 self.emit(QtCore.SIGNAL('stage_data'),[x, y, scaled_dem_array,self.idle])
 
+                #update positions for next iteration, used to see if new orbit is necessary
                 self.current_pos = [particle.pos[0], particle.pos[1]] 
                 self.current_vel = [particle.vel[0], particle.vel[1]]
                 
                 try:
-                    #time.sleep(.93 + (.00025*TRACE_LENGTH) - (time.time() - start_loop))
-                    time.sleep(.93  - (time.time() - start_loop))
+                    time.sleep(.93  - (time.time() - start_loop)) #sleep the amount of time to make each loop take 0.93 seconds
                 except:
-                    print ''#time.sleep(.95 + (.00025*TRACE_LENGTH) - (time.time() - start_loop))
+                    print ''
 
                 dt = time.time()-start_loop
                 print 'LOOP TOOK: ', dt
+
+                #if idle_time has passed since last new input, start idle mode and raise welcome screen to top
                 if time.time() - last_idle >= args.idle_time:
                     self.idle=True
                     self.parent().WelcomeScreen.raise_()
             else:
+                #IDLE MODE - only update topography 
+
+                #check if there are new inputs from main thread
                 input_pos, input_vel = self.in_pos, self.in_vel
                 if self.differ(input_pos, self.previous_pos) or self.differ(input_vel, self.previous_vel):
                     self.idle = False
                     last_idle = time.time()
                     continue
+
+                #update surface
                 scaled_dem_array = topo.update_surface(self.baseplane, self.bounds,self.prev_dem,verbose=True)
-                #scaled_dem_array = scaled_dem_array[40:-30, 30:-30] 
-                #scaled_dem_array = np.load('display_dem.npy') 
                 self.prev_dem = scaled_dem_array
                 scaled_dem_array = self.normalize_bg(scaled_dem_array)
 
@@ -339,30 +340,28 @@ class GravityThread(QtCore.QThread):
                     scaled_dem_array = self.make_contours(scaled_dem_array)
                 x = np.zeros(100)
                 y = np.zeros(100)
-                #np.save('../circles.npy',scaled_dem_array)
-                #x,y = self.loading_circle()
-                #bck = np.zeros((410,610))
-                #bck[:,30:] = scaled_dem_array
+                
+                #send 'orbit' and surface to main thread for display
                 self.emit(QtCore.SIGNAL('stage_data'),[x/scaled_dem_array.shape[1], y/scaled_dem_array.shape[0], scaled_dem_array, self.idle])
-                #add an idle message! or plot a loading circle...?
-                time.sleep(1)
+                
+                time.sleep(0.93 - (time.time()-start_loop) ) #for consistent loop timing with calculation mode
 
     def read_input(self,inputs, vel_scaling,x_factor=580, y_factor=410):
-        x_i, y_i, x_f, y_f = inputs
-        #pos = np.array([y_i * y_factor +10, x_i * x_factor-10]) 
-        pos = np.array([y_i * y_factor +0, x_i * x_factor-0])    
+        #convert the mouse positions from the main thread to (x,y) and (vx,vy)
+        x_i, y_i, x_f, y_f = inputs #unpack 
+        
+        pos = np.array([y_i * y_factor, x_i * x_factor])    
         d_x = (x_f - x_i)*x_factor
         d_y = (y_f - y_i)*y_factor
         ang = np.arctan2(d_y,d_x)
         mag = np.sqrt(d_x**2 + d_y**2) * vel_scaling
         vel = np.array([np.sin(ang)*mag, np.cos(ang)*mag])
-        #print pos, vel, 'pos and vel'
-    
+       
         self.in_pos = pos
         self.in_vel = vel
 
     def normalize_bg(self, bg):
-        #force range of values
+        #set a consistent contrast range, sacrificing two pixels
         bg[0,0] = -600
         bg[0,1] = 15
 
@@ -370,29 +369,33 @@ class GravityThread(QtCore.QThread):
         return np.nan_to_num(bg)
 
     def make_contours(self, im, num_contours=7):
+        #Function to add contour lines to surface plot
+
+        #set the levels at which to calculate contours
         contour_levels = np.linspace(np.min(im)*.7, np.max(im)*.9,num_contours)
         contour_levels = np.append(contour_levels, np.median(im))
 
+        #use scikit-image measurement tool to find pixel locations for contours
         for v in contour_levels:
             c = measure.find_contours(im, v)
             for n, contour in enumerate(c):
                 contour = np.nan_to_num(contour).astype(int)
-                im[contour[:,0], contour[:,1]] = -.5 #-600
-
+                im[contour[:,0], contour[:,1]] = -.5 #set to a negative value because colormaps define negative as contour lines
         return im
 
 
 
-
+"""Widget for displaying the topography with or without contours and for animating the orbit of the test particle.
+Called from Display. There are two of these widgets, one on the monitor display and one on the sand surface. """
 class Surface(QtGui.QWidget):
     def __init__(self, parent=None, aspectLock=True, lmargin=0,rmargin=0, tmargin=20, bmargin=20, xstart=0,ystart=0,xspan=1160*4/3.,yspan=1160):
         super(Surface,self).__init__(parent)
         #### Create Gui Elements ###########
         self.mainbox = QtGui.QWidget()
-        #self.setCentralWidget(self.mainbox)
         self.setLayout(QtGui.QGridLayout())
         self.setCursor(QtCore.Qt.CrossCursor)
         
+        #create the plotting canvas and define its size
         self.canvas = pg.GraphicsLayoutWidget()
         self.layout().addWidget(self.canvas)
         self.view = self.canvas.addViewBox()
@@ -402,72 +405,73 @@ class Surface(QtGui.QWidget):
         self.view.setBackgroundColor((.5,.5,.5,1.))
         self.xsize = float(xspan); self.ysize = float(yspan)
 
-        self.setGeometry(0+xstart,0+ystart, xspan, yspan) # JUST IN CASE, CTRL-ALT-ESC    
+        #define the geometry of the entire widget
+        self.setGeometry(0+xstart,0+ystart, xspan, yspan)  
         self.canvas.nextRow()
         self.setContentsMargins(lmargin,tmargin,rmargin,bmargin)
 
-        #r = cmap_viridis
+        #define all the colormaps. lut(N)c is the map without a contour
         r = cmap_jet[::-1]
         pos = np.linspace(0.,1.5,len(r)-1)
         pos= np.append(pos, np.array([-.00125]))
         self.cmap = pg.ColorMap(pos, r)
-        self.lut = self.cmap.getLookupTable(-.001,1.6,512)#.1,-1.8,512)#(-.009,1.05, 256)
+        self.lut = self.cmap.getLookupTable(-.001,1.6,512)
         self.lutc = self.cmap.getLookupTable(0.1,1.72,512)
 
         r2 = cmap_viridis[::-1]
         pos2 = np.linspace(-0.005,.9,len(r2)-1)
         pos2= np.append(pos2, np.array([-1]))
-        #pos2 = np.linspace(1.4,-.7,len(r2)-1)
-        #pos2= np.append(pos2, np.array([np.nan]))
         self.cmap2 = pg.ColorMap(pos2, r2)
-        self.lut2 = self.cmap2.getLookupTable(0,.85,512)#-5,1.4,256)
+        self.lut2 = self.cmap2.getLookupTable(0,.85,512)
         self.lut2c = self.cmap2.getLookupTable(0.1,.95,512)
 
-        r4 = cmap_sauron#[::-1]
-        pos4 = np.linspace(0.05,.9,len(r4)-1)#np.array([0.]+[.05*np.power(2,k) for k in range(len(r4)-2)])/2.+.3 #np.linspace(0.2,.95,len(r4)-1)
+        r4 = cmap_sauron
+        pos4 = np.linspace(0.05,.9,len(r4)-1)
         pos4= np.append(pos4, np.array([-1]))
-        #pos4 = np.linspace(.8,-.3,len(r4)-1)
-        #pos4= np.append(pos4, np.array([np.nan]))
         self.cmap4 = pg.ColorMap(pos4, r4)
-        self.lut4 = self.cmap4.getLookupTable(0,.95)#.0,2,512)#-6.25,.8,256)
+        self.lut4 = self.cmap4.getLookupTable(0,.95)
         self.lut4c = self.cmap4.getLookupTable(0.2,.95)
 
         #same as sarndbox
         r5 = cmap_geo[::-1]
-        pos5 = np.linspace(.0,1.08,len(r5)-1)+.15#(np.array([-40,-30,-20,-12.5,-.75,-.25,-.05,0,.05,.25,.75,12.5,20,30,40])+40) /80.
+        pos5 = np.linspace(.0,1.08,len(r5)-1)+.15
         pos5 = np.append(pos5,np.array([-1]))
         self.cmap5 = pg.ColorMap(pos5,r5)
         self.lut5 = self.cmap5.getLookupTable()
         self.lut5c = self.cmap5.getLookupTable(.05,1.05)
 
-
         #black
         r3 = np.array([[0,0,0,256],[255,255,255,178]])
         pos3 = [-1,0.]
-        #pos3= np.append(pos3, np.array([np.nan]))
         self.cmap3 = pg.ColorMap(pos3, r3)
         self.lut3 = self.cmap3.getLookupTable(-1,0,2)
 
         self.luts = [self.lut, self.lut2, self.lut4, self.lut3,self.lut5]
         self.luts_base = [self.lutc, self.lut2c, self.lut4c, self.lut3,self.lut5c]
-        self.imap = 0
+        self.imap = 0 #index of colormap for use in synching colors when contours are toggled
 
-        #### Set Data  #####################
+        #### Set  Initial Data  #####################
         self.start = time.time()
-        self.y = []#[0:20]
-        self.x = []#[0:20]
+        self.y = []
+        self.x = []
         self.newx = np.copy(self.x)
         self.newy = np.copy(self.y)
         self.j = 0
-        #  image plot
-        self.data = np.rot90(bg)#np.zeros((580,410)))
+        self.tracex = [0]; self.tracey = [0]
+        self.pressed =False; self.moved = False
+        self.xlow = 0; self.ylow = 0
+        self.xhigh = 0; self.yhigh = 0
+        #  surface plot
+        self.data = np.rot90(bg)
         self.newbg = np.copy(self.data)
         self.img = pg.ImageItem(border=None)
-        self.img.setZValue(-100)
+        self.img.setZValue(-100) #set image below animating scatter plot
         self.img.setLookupTable(self.lut)
         self.img.setImage(self.data)
         self.current_conts = []
         self.pdi_list = []
+
+        #define the number of colors for animating trail gradient
         n_colors = 5
         grad = np.linspace(64,255,n_colors)
         for x in grad:
@@ -477,26 +481,26 @@ class Surface(QtGui.QWidget):
         for v in self.pdi_list:
             self.view.addItem(v)
 
-        self.tracex = [0]; self.tracey = [0]
-        self.pressed =False; self.moved = False
-        self.xlow = 0; self.ylow = 0
-        self.xhigh = 0; self.yhigh = 0
-        self.view.mouseClickEvent = self.new_MouseClickEvent
+        #recursively enable mouse tracking across the plotting widgets
+        self.view.mouseClickEvent = self.new_MouseClickEvent 
         self.setMouseTracking(True)
 
     def _update_pos(self, x,y, color='w'):
+        #update the position of the animating particle
 
+        #if there are no data, plot nothing
         if len(x) < 1 and color != 'r':
             for i in range(len(self.pdi_list)):
                 v = self.pdi_list[i]
                 v.setData([], [])
-        else:    
+        else:    #otherwise plot the values evenly distributed among the trail gradient
             self.x = x; self.y = y
-            num_vals = 50 / len(self.pdi_list)
+            num_vals = 50 / len(self.pdi_list) #define number of points per color
             self.pdi_list[0].setPen(color=(255, 255, 255,32),width=3)
             for i in range(len(self.pdi_list)):
                 v = self.pdi_list[i]
                 v.setData(x[i*num_vals:(i+1)*num_vals], y[i*num_vals:(i+1)*num_vals])
+            #if trace is enabled, add the previous trail to existing trace (keeping only every 5th value)
             if TRACE_BOOL and not self.parent().gravity_thread.idle:
                 i=1
                 self.tracex = np.append(x[i*num_vals:(i+1)*num_vals:5],self.tracex)[::]#np.append(x,self.tracex)[::5]
@@ -504,10 +508,10 @@ class Surface(QtGui.QWidget):
                 if len(self.tracex) > 10000:
                     self.tracex = self.tracex[:10000]
                     self.tracey = self.tracey[:10000]
-            else:
+            else: #if idle or trace turned off, clear the trace
                 self.tracex = []
                 self.tracey = []
-        if color=='r':
+        if color=='r': #color is defined as red when the mouse is clicked
             v = self.pdi_list[0]
             v.setPen(color='r',width=3)
             for i in range(len(self.pdi_list)):
@@ -515,32 +519,35 @@ class Surface(QtGui.QWidget):
                 v.setData(x[i*num_vals:(i+1)*num_vals], y[i*num_vals:(i+1)*num_vals])
         
     def _update_bg(self, bg, stretch=False):
+        #function to update the surface plot
         self.data = np.rot90(bg,1)
+
+        #if the color is black, define all bg values as -1 because why complicate things
         if self.imap == 3:
             self.data = np.zeros(bg.shape)-1.
             self.data = np.rot90(self.data)
  
         if TRACE_BOOL:
+            #if trace enabled (and trace values exist), set those pixels on the surface to a constant value
             if len(self.tracex) > 1:
                 self.data[np.nan_to_num(self.tracex).astype(int),np.nan_to_num(self.tracey).astype(int)] = 0.
 
-
+        #once all modifications are done, set the plot data as the surface
         self.img.setImage(self.data)
 
-        if args.cont_on:
-            self.mk_contours_thread.update_bg(bg)
-
     def set_cmap(self, imap):
+        #function to set the colormap to a different value, imap is the index
+        #0=default (jet), 1=viridis, 2=sauron, 3=black, 4=geology
         self.imap = imap
+        #use the specific lookuptable for either contours on or off
         if CONTOURS_ON:
             self.img.setLookupTable(self.luts[imap])
         else:
             self.img.setLookupTable(self.luts_base[imap])
 
     def mouseMoveEvent(self, e):
-        #constrain the mouse cursor?
+        #if there has been a click inside the boundaries, track the mouse position
         pos = e.pos()
-        print pos, 'cursor position, child'
 
         if self.pressed:
             self.moved = True
@@ -549,23 +556,23 @@ class Surface(QtGui.QWidget):
 
 
     def mousePressEvent(self, QMouseEvent):
+        #track mouse clicks for user-input initial vectors
         if QMouseEvent.button() == QtCore.Qt.LeftButton:
             pos = QMouseEvent.pos()
 
             if not self.pressed:
+                #if there hasn't been a first click, set pressed to true and keep start position
                 self.pressed =True
                 self.parent().pressed = True
-                #print pos.x(), pos.y()
                 self.start_pos = [(pos.x()-22)/1500., (pos.y()-10)/1140.]
                 self.parent().start_pos = self.start_pos
-                print pos.x(), pos.y(), 'click click mfer'
                 self.parent().toggle_trace()
-                self.emit(QtCore.SIGNAL('clear data'))
+                self.emit(QtCore.SIGNAL('clear data')) #clear the data so that only the mouse position, rather than the orbit, is displayed
 
             elif self.pressed:
+                #if there's been a click, then this is the second click so keep the final position and start a new computation
                 self.pressed=False
                 self.end_pos = [(pos.x()-22)/1500., (pos.y()-10)/1140.]
-                print 'Trace bool value', TRACE_BOOL
                 self.tracex= []; self.tracey=[]
                 self.emit(QtCore.SIGNAL('clear data'),self.start_pos)
                 #send a signal to parent with start and end positions
@@ -574,27 +581,26 @@ class Surface(QtGui.QWidget):
     def new_MouseClickEvent(self, e):
         if e.button() == QtCore.Qt.RightButton:
             e.accept()
-    
+
+"""Settings widget for fine-tuning of surface plot on sand. Only created by Display if args.calib flag is set to true. """    
 class Settings(QtGui.QWidget):
     def __init__(self, parent=None):
         super(Settings,self).__init__(parent)
-
+        #create the GUI elements
         self.mainbox = QtGui.QWidget()
-        #self.setCentralWidget(self.mainbox)
         self.setLayout(QtGui.QGridLayout())
         self.setCursor(QtCore.Qt.CrossCursor)
-        #self.setMouseTracking(True)
         self.setGeometry(0,0,250,450)
         self.setFocus()
 
+        #list to hold all text-edit widgets
         self.boxes = []
-
 
         self.update_btn = QtGui.QPushButton('Update',self)
         self.update_btn.clicked.connect(self._update)
         self.update_btn.move(0,10)
 
-        #             [lmargin, rmargin, tmargin, bmargin, x0,y0, xstretch, ystretch]
+        #[lmargin, rmargin, tmargin, bmargin, x0,y0, xstretch, ystretch]
         self.params = [0,0,0,0,0,0,1280,960]
 
         self.lmargin_lbl = QtGui.QLabel(self)
@@ -664,16 +670,17 @@ class Settings(QtGui.QWidget):
         self.setAutoFillBackground(True)
 
     def _update(self):
+        #if the update button has been clicked, change the parameters of Surface widget in Display and re-draw it
         for i in range(len(self.boxes)):
             b = self.boxes[i]
             t = b.text().toFloat()
-            #print t
             self.params[i] = t[0]
 
         self.parent().lmargin,self.parent().rmargin,self.parent().tmargin,self.parent().bmargin,self.parent().xstart,self.parent().ystart,self.parent().xspan,self.parent().yspan = self.params
         self.parent().need_new =True
 
 
+"""Custom version of PushButton that uses our own assets as pixmaps """
 class PicButton(QtGui.QPushButton):
     def __init__(self,text, pixmap, parent=None):
         super(PicButton, self).__init__(parent)
@@ -685,6 +692,7 @@ class PicButton(QtGui.QPushButton):
         painter = QtGui.QPainter(self)
         painter.drawPixmap(event.rect(), self.pixmap)
 
+"""Custom version of CheckBox that uses our own assets as pixmaps """
 class PicCheckButton(QtGui.QCheckBox):
     def __init__(self,text, pixmap0,pixmap1, parent=None):
         super(PicCheckButton, self).__init__(parent)
@@ -695,18 +703,17 @@ class PicCheckButton(QtGui.QCheckBox):
         self.setStyleSheet("QCheckBox::indicator:checked {image: url("+ self.pixmap1 +");}QCheckBox::indicator:unchecked{image: url(" +self.pixmap0 + ");}")
         self.pixmap = QtGui.QPixmap(self.pixmap0)
 
-
     def paintEvent(self, event):
         painter = QtGui.QPainter(self)
         painter.drawPixmap(event.rect(), self.pixmap)
 
-
+"""Main widget that holds and organizes all other widgets (Surface, AboutScreen, UIowaScreen, Settings, WelcomeScreen) and 
+all other threads (GravityThread). Called at the start of the program."""
 class Display(QtGui.QWidget):
     def __init__(self, parent=None):
         super(Display,self).__init__(parent)
         #### Create Gui Elements ###########
         self.mainbox = QtGui.QWidget()
-        #self.setCentralWidget(self.mainbox)
         self.setLayout(QtGui.QGridLayout())
         self.setCursor(QtCore.Qt.CrossCursor)
         self.setMouseTracking(True)
@@ -715,7 +722,6 @@ class Display(QtGui.QWidget):
 
         ###LAYOUT THE DSIPLAY ###
         self.bck=QtGui.QLabel(self)
-        #self.bck.setPixmap(QtGui.QPixmap('./aux/starfield.png'))
         self.bck.setStyleSheet("background-color:  #1b1c1d ")
         self.bck.setGeometry(0,0,1920,1080)
         self.bck.setScaledContents(True)
@@ -743,21 +749,15 @@ class Display(QtGui.QWidget):
 
 
         #### BUTTONS ######
-        #self.trail_button = QtGui.QPushButton('Trail', self)
-        #self.trail_button.setStyleSheet("background-image: url(" + './aux/assets' + "/trail_off.png);")
         self.trail_button = PicCheckButton('Trail', "./aux/assets/trail_off.png", "./aux/assets/trail_on.png",self)
-        #self.trail_button.clicked.connect(self.start_trace)
         self.trail_button.stateChanged.connect(self.toggle_trace)
-        #self.trail_button.setIcon(QtGui.QIcon("./aux/assets/trail_off.png"))
-        #self.trail_button.setIconSize(QtCore.QSize(150,150))
         self.trail_button.setGeometry(0,0,250,100)
         self.trail_button.setStyleSheet('font-size:24px;')
         self.trail_button.move(80,360-50)
 
-        #self.cmap_button = QtGui.QPushButton('ColorMap', self)
         self.cmap_button = PicButton('ColorMap', QtGui.QPixmap("./aux/assets/colormap.png"),self)
         self.menu = QtGui.QMenu()
-        self.menu.addAction('Default', self.set_nocont)
+        self.menu.addAction('Default', self.set_jet)
         self.menu.addAction('Sauron', self.set_sauron)
         self.menu.addAction('Viridis', self.set_viridis)
         self.menu.addAction('Geology', self.set_geo)
@@ -768,23 +768,19 @@ class Display(QtGui.QWidget):
         self.cmap_button.setGeometry(0,0,250,100)
         self.cmap_button.move(80,180-50)
 
-        #self.clear_button = QtGui.QPushButton('Reset', self)
         self.contour_toggle = PicCheckButton('Contour', "./aux/assets/contours_on.png", "./aux/assets/contours_off.png",self)
-        #self.contour_toggle.clicked.connect(self.toggle_conts)
         self.contour_toggle.setChecked(True)
         self.contour_toggle.stateChanged.connect(self.toggle_conts)
         self.contour_toggle.setGeometry(0,0,250,100)
         self.contour_toggle.setStyleSheet('font-size:24px;')
         self.contour_toggle.move(80,360+180-50)
 
-        #self.about_button = QtGui.QPushButton('About', self)
         self.about_button = PicButton('About', QtGui.QPixmap("./aux/assets/about.png"),self)
         self.about_button.clicked.connect(self.open_about)
         self.about_button.setGeometry(0,0,250,100)
         self.about_button.setStyleSheet('font-size:24px;')
         self.about_button.move(80,720-50)
 
-        #self.sarndbox_button = QtGui.QPushButton('SARndbox', self)
         self.sarndbox_button = PicButton('Sarndbox', QtGui.QPixmap("./aux/assets/sarndbox.png"),self)
         self.sarndbox_button.clicked.connect(self.start_sarndbox)
         self.sarndbox_button.setGeometry(0,0,250,100)
@@ -797,7 +793,6 @@ class Display(QtGui.QWidget):
             self.settings.move(300,300)
             self.settings.raise_()
         
-
         self.pressed=False; self.moved=False  
 
         """
@@ -838,99 +833,76 @@ class Display(QtGui.QWidget):
         self.start = time.time()
         self.home.raise_()
         self.about.lower()
-        #self.home.close()
         self._update()
 
 
-
     def keyPressEvent(self, e):
+        #if user presses ESC, exit the software
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
             sys.exit()
-    def handleButton(self):
-        print ('Hello World')
-        if self.lutval == 1:
-            self.img.setLookupTable(self.lut2)
-            self.lutval = 2
-        else:
-            self.img.setLookupTable(self.lut)
-            self.lutval = 1
+    
 
-    def set_black(self):
+    def set_black(self): #set colormap to black
         self.surface1.set_cmap(3)
         self.surface2.set_cmap(3)
-    def set_nocont(self):
+    def set_jet(self): #set colormap to jet (default)
         self.surface1.set_cmap(0)
         self.surface2.set_cmap(0)
-    def set_sauron(self):
+    def set_sauron(self): #set colormap to sauron
         self.surface1.set_cmap(2)
         self.surface2.set_cmap(2)
-    def set_viridis(self):
+    def set_viridis(self): #set colormap to viridis
         self.surface1.set_cmap(1)
         self.surface2.set_cmap(1)
-    def set_geo(self):
+    def set_geo(self): #set colormap to geology
         self.surface1.set_cmap(4)
         self.surface2.set_cmap(4)
-    def toggle_conts(self):
-        val = self.contour_toggle.isChecked()
+
+    def toggle_conts(self): 
+        #toggle the contours by switching CONTOURS_ON value
+        val = self.contour_toggle.isChecked() #value of check box
         global CONTOURS_ON
         CONTOURS_ON = val
         self.surface1.set_cmap(self.surface1.imap)
         if CONTOURS_ON:
-            self.contour_toggle.pixmap = QtGui.QPixmap(self.contour_toggle.pixmap0)
+            self.contour_toggle.pixmap = QtGui.QPixmap(self.contour_toggle.pixmap0) #update checkbox image to have x
         else:
-            self.contour_toggle.pixmap = QtGui.QPixmap(self.contour_toggle.pixmap1)
+            self.contour_toggle.pixmap = QtGui.QPixmap(self.contour_toggle.pixmap1) #update checkbox image to be unchecked
 
     def toggle_trace(self):
+        #toggle the trace by switching TRACE_BOOL
         val =self.trail_button.isChecked()
         global TRACE_BOOL
         TRACE_BOOL = val
 
+        #clear the traces and update the button's image 
         if TRACE_BOOL:
             self.tracex = []; self.tracey = []
-            self.trail_button.pixmap = QtGui.QPixmap(self.trail_button.pixmap1)
+            self.trail_button.pixmap = QtGui.QPixmap(self.trail_button.pixmap1) #checked
         else:
-            self.trail_button.pixmap = QtGui.QPixmap(self.trail_button.pixmap0)
+            self.trail_button.pixmap = QtGui.QPixmap(self.trail_button.pixmap0) #unchecked
             self.tracex = []; self.tracey = []
             global TRACE_LENGTH
             TRACE_LENGTH = 0
 
     def open_about(self):
+        #open the about screen
         self.about.raise_()
 
         
     def start_sarndbox(self):
-        print 'call whatever starts the sarndbox'
-        #call('/home/gravbox/src/SARndbox-2.3/bin/SARndbox -uhm -fpv -rs 0.0&', shell=True)
+        #exit with status 2, which tells the start_sandbox script to open the AR Sandbox
         sys.exit(2)
 
-    '''def start_trace(self):
-                    global TRACE_BOOL
-                    TRACE_BOOL = True
-                    self.tracex = []; self.tracey = []
-            
-                def end_trace(self):
-                    global TRACE_BOOL
-                    TRACE_BOOL = False
-                    self.tracex = []; self.tracey = []
-                    self.gravity_thread.idle = True
-                    self.surface1._update_pos([0],[0])
-                    self.surface2._update_pos([0],[0])
-                    self.x = []
-                    self.y = []
-                    global TRACE_LENGTH
-                    TRACE_LENGTH = 0'''
-
-
     def mouseMoveEvent(self, e):
-        #constrain the mouse cursor?
+        #track mouse position and constrain to the monitor window
         pos = e.pos()
         if pos.x() > 1920:
             self.pp.setPos(1920,pos.y())
 
-#will need to be rescaled
-
     def setMouseTracking(self, flag):
+        #recursively set the mouse tracking in all child widgets
         def recursive_set(parent):
             for child in parent.findChildren(QtCore.QObject):
                 try:
@@ -947,11 +919,15 @@ class Display(QtGui.QWidget):
             e.accept()
 
     def start_computation(self, arr):
+        #function to send click positions to the gravity thread
         self.start_pos = arr[0]; self.end_pos = arr[1]
         self.gravity_thread.read_input([self.start_pos[0],self.start_pos[1],self.end_pos[0],self.end_pos[1]],args.vel_scaling)
+        #set cursor to loading wheel
         self.mainbox.setCursor(QtCore.Qt.WaitCursor)
+        #clear orbit positions
         self.surface1._update_pos([],[])
         self.surface2._update_pos([],[])
+        #reset all x and y values
         x_scaled = self.newx* YWIDTH - 7
         self.x =  np.log( np.zeros(len(x_scaled))-1)
         self.y = np.copy(self.x)
@@ -966,6 +942,7 @@ class Display(QtGui.QWidget):
         #TRACE_LENGTH = 0
 
     def clear_data(self):
+        #clear the orbit position data in the Surface widgets
         self.surface1._update_pos([0],[0])
         self.surface2._update_pos([0],[0])
         self.surface1.tracex = []; self.surface1.tracey = []
@@ -977,69 +954,69 @@ class Display(QtGui.QWidget):
         self.pressed = True
 
 
-        #self.surface1.close()
-        #self.surface1 = Surface(self)
-        #self.surface1.move(400,100)
-
-
     def stage_data(self, data):
+        #the gravity thread sends the x, y, and surface data to this function to be set in the Display class variables for later use
+        #in animating on the Surface widgets
         if len(self.newx) <1:
             self.counter = 0
         self.newx, self.newy, self.newbg, self.calc_idle = data
-        #self.newy = self.newy+1
+        
 
     def _update(self):
+        #update the positions and surface of the orbit data
         if self.counter >= 0:
 
           if self.need_new:
-            #self.surface1.close()
+            #need_new is True if Settings widget changes parameters of Surface widget, this creates a new one
             self.surface2.setGeometry(1920+self.xstart,0+self.ystart, self.xspan, self.yspan)
             self.surface2.setContentsMargins(self.lmargin,self.tmargin, self.rmargin, self.bmargin)
             self.surface2.update()
-            #self.surface1.raise_()
             self.update()
             self.need_new= False
-          #print self.pp.pos().x()
-          #print self.y; self.x
+          
           if not self.pressed:
+            #if the user has not clicked to input a new initial vector, update the particle positions[i:i+50]
+            # so that there is a trail behind the head of the particle. 
             self.surface1._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
             self.surface2._update_pos(self.y[self.counter:self.counter + 50], self.x[self.counter:self.counter + 50])
 
           if self.pressed:
-            #print self.pp.pos(), 'this'
-            #self.current_pos = [(self.pp.pos().x()-206)/float(1508.), (self.pp.pos().y())/float(1080.)]
+            #if the user is inputting a new initial vector, plot a red line from start_pos to the current cursor location
             self.current_pos = [(self.pp.pos().x()-409)/float(1508.), (self.pp.pos().y())/float(1080.)]
-            
-            #print self.current_pos, self.start_pos
-
             self.surface1._update_pos([YWIDTH-self.start_pos[0]*YWIDTH,YWIDTH-self.current_pos[0]*YWIDTH],[self.start_pos[1]*XWIDTH,self.current_pos[1]*XWIDTH],color='r')
             self.surface2._update_pos([580*2-self.start_pos[0]*580*2,580-self.current_pos[0]*580],[self.start_pos[1]*410,self.current_pos[1]*410],color='r')
 
+          #repeat this function call every 6.5 ms
           QtCore.QTimer.singleShot(6.5, self._update)
+          #increment through orbit locations
           self.counter += 1
           
           #staggered loading of data
+
+          #if 50 points from end, append the new orbit positions to the current track
+          #this makes x,y go to length 400
           if self.counter == len(self.newx)-50:
             x_scaled = self.newx* YWIDTH #- 7
             y_scaled = YWIDTH- (self.newy * XWIDTH) #- 12
             self.x = np.append(self.x, x_scaled)
             self.y = np.append(self.y, y_scaled)
-            #print x_scaled[0], y_scaled[0]
-            print 'updating'
+            
+          #if 20 points from end, update the background
           if self.counter == len(self.newx)-20:
             bg = self.newbg / scaling
-            #bg[0,0] = 600
-            #bg[0,1] = -5
             self.data = np.rot90(bg,1)
             self.surface1._update_bg(bg)
             self.surface2._update_bg(bg,stretch=True)
-            
+          
+          #if we've gone through all the points in one orbit calculation, move on to the next orbit
+          #this shrinks the x,y vectors back to 200 
           if self.counter >= len(self.newx):
             if TRACE_BOOL == False:
                 self.tracex = []
                 self.tracey = []
                 global TRACE_LENGTH
                 TRACE_LENGTH = 0
+            #wait an amount of time so that animating is smooth and consistent
             try:
                 print time.time() - self.start,  'ANIMATING TOOK'
                 time.sleep(.9 - (time.time() - self.start))
@@ -1053,9 +1030,11 @@ class Display(QtGui.QWidget):
                 self.x = self.x[100:]
                 self.y = self.y[100:]
                 self.start = time.time()
+        #if there is no data, keep looping until the counter is changed
         else:
             QtCore.QTimer.singleShot(1, self._update) 
 
+#define command-line flags 
 parser = ArgumentParser()
 parser.add_argument("-i", "--idle", dest="idle_time", default=180., type=float, help="Set the amount of time (in seconds) until idle mode begins (default 600)")
 parser.add_argument("-t", "--timing", dest="INT_SECONDS", default=3.5, type=float, help="Set the number of seconds per iteration you would like (default 3.5)")
@@ -1068,7 +1047,7 @@ parser.add_argument("-m", "--colormap", dest="cmap_name", type=str, default='jet
 parser.add_argument("-q", "--second_display", dest="second_display", type=int, default=0,help="Display on a second monitor? Yes (1), No (0). Default no.")
 parser.add_argument("-b", "--calibrate", dest="calibrate", type=bool, default=False,help="Display calibration gui? Default False")
 
-
+#boilerplate code, initialize the Display widget and start the program
 if __name__ == '__main__':
     args = parser.parse_args()
     app = QtGui.QApplication(sys.argv)

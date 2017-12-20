@@ -1,85 +1,111 @@
-# Gravity Algorithm for AR Sandbox
-# Fall 2016
-# Jianbo Lu, Tyler Stercula, Sophie Deam
+"""
+Orbit Calculation for Gravbox, an Augmented Reality Gravitational Dynamics Simulation. 
+Relies on Verlet ('leapfrog') integration to conserve energy throughout orbit and to accomplish relatively fast, accurate orbits.
+
+This was developed at the University of Iowa by Jacob Isbell
+    based on work in Dr. Fu's Introduction to Astrophysics class by Jacob Isbell, Sophie Deam, Jianbo Lu, and Tyler Stercula (beta version)
+Version 1.0 - December 2017
+"""
 
 import numpy as np
-#from astropy.io import fits
-#from astropy.convolution import convolve, convolve_fft
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.mlab as mlab
 from scipy.optimize import curve_fit
-
 import time
 
 
-
+"""Class to hold Particle object, holds position and velocity as well as acceleration field. 
+Has functions to update particle parameters using leapfrog integration."""
 class Particle():
     def __init__(self,pos,vel, accel,ggx, ggy):
-       
+        #set initial positions, velocities, and acceleration fields
+
+        #x acceleration field
         self.dx = accel[0]
+        # y acceleration field
         self.dy = accel[1]
+
+        #2nd order accleration fields
 	self.ggx = ggx
         self.ggy = ggy
+
+        #box boundaries
 	self.MAXX = self.dx.shape[1]-2
         self.MIN = 0
         self.MAXY = self.dy.shape[0]-2
-        #print self.MAXX, self.MAXY, 'SHAPE'
+
+        #initial position, velocity
         self.pos = pos
         self.prev_pos = np.copy(pos)
         self.vel = vel
+        #make sure particle is in bounds [MINX:MAXX, MINY:MAXY]
         try:
             self.acc = [self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]]
         except:
             self.acc = [0.,0.]
+
     def update_accel(self,pos):
+        #update the accleration based on position within x,y acceleration fields
         self.acc = [self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]]
+
     def a(self):
+        #update the accleration based on position within x,y acceleration fields, if not in bounds return previous accel value
         try:
             acc = [self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]]
             self.acc = np.copy(acc)
             return np.array(acc)
         except:
-            return self.acc#[self.dx[int(self.prev_pos[0]),int(self.prev_pos[1])], self.dy[int(self.prev_pos[0]),int(self.prev_pos[1])]]
+            return self.acc
+
     def v(self,pos, step):
+        #update the velocity based on current acceleration and user-defined timestep
         temp_a = self.a()
         self.vel = [self.vel[0]+temp_a[0]*step, self.vel[1]+temp_a[1]*step]
         return self.vel
 #--------------------------------------------------------------
+#INTEGRATION METHODS
+#--------------------------------------------------------------
     def leapfrog(self,step=0.01):
+        # modified leapfrog based on integer steps
         new_pos = np.array(self.pos) + np.nan_to_num(np.array(self.vel)) * step + (0.5 * step**2 * np.nan_to_num(np.array(self.a())))
-	try:
-       		new_accel = np.nan_to_num(np.array([self.dx[int(new_pos[0]),int(new_pos[1])], self.dy[int(new_pos[0]),int(new_pos[1])]]))
-	except:
-		new_accel = np.nan_to_num(np.array(self.a()))
+        try:
+        	new_accel = np.nan_to_num(np.array([self.dx[int(new_pos[0]),int(new_pos[1])], self.dy[int(new_pos[0]),int(new_pos[1])]]))
+        except:
+            new_accel = np.nan_to_num(np.array(self.a()))
         new_vel = self.vel + 0.5*(np.nan_to_num(np.array(self.a())) + new_accel)*step
         self.pos = np.copy(new_pos)
         self.vel = np.copy(new_vel)
+  
     def kick(self, step=0.01):
+        #kick the particle for verlet integration offset by half-step  
         self.vel = self.vel+ .5 * step*np.array(self.acc)
 
     def leapfrog2(self, step=0.01):
+        #'true' leapfrog based on offset steps
+        #can be modified to use 2nd order acceleration
         new_pos = np.array(self.pos) + np.array(self.vel)*step
-    
         #new_x = self.ggx[int(self.pos[0]),int(self.pos[1])] * (self.pos[0]-int(self.pos[0])) 
         #new_y = self.ggy[int(self.pos[0]),int(self.pos[1])] * (self.pos[1]-int(self.pos[1])) 
-	try:
+        try:
         	new_accel = np.array([self.dx[int(new_pos[0]),int(new_pos[1])], self.dy[int(new_pos[0]),int(new_pos[1])]])
-            #new_accel = np.array([self.dx[int(new_pos[1]),int(new_pos[0])], self.dy[int(new_pos[1]),int(new_pos[0])]])
-	except:
-		new_accel = np.array([self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]])
-        	#new_accel = np.array([self.dx[int(self.pos[1]),int(self.pos[0])], self.dy[int(self.pos[1]),int(self.pos[0])]])
+        except:
+            new_accel = np.array([self.dx[int(self.pos[0]),int(self.pos[1])], self.dy[int(self.pos[0]),int(self.pos[1])]])
 
         new_vel = self.vel + step * new_accel #+ np.array([new_x,new_y]) * step
 
         self.pos = np.copy(new_pos)
         self.vel = np.copy(new_vel)
-	return new_pos
+	    return new_pos
   
 
     def energy(self):
-        return (0.5*(self.vel[0]**2 + self.vel[1]**2) + self.pot[self.pos[0], self.pos[1]])
-    def update(self,step,kind='rk4'): 
+        #return K + U energy
+        return (0.5*(self.vel[0]**2 + self.vel[1]**2) + self.pot[self.pos[0], self.pos[1]]) 
+
+
+    def update(self,step,kind='leapfrog2'): 
+        #update the particle position using the selected integration method
         if kind == 'leapfrog':
             if self.is_inbounds(self.edge_mode):
                 self.prev_pos = np.copy(self.pos)
@@ -94,16 +120,24 @@ class Particle():
 		else:
                 	self.pos[i] = [x for x in p1]
            	self.prev_pos = np.copy(self.pos)
+
+
+
     def is_inbounds(self, edge_mode):
+        #check to see if the particle is in the boundaries, to prevent 'index out of bounds' errors
+        #edge modes are 'reflect' which bounces off sides, returning True
+        #               'pacman' which wraps the particle around to the other side, returning True
+        #               'stop'    returns False if out of bounds, which ends simulation
         self.edge_mode = edge_mode
+
         if edge_mode == 'stop':
             return self.pos[0] < self.MAXX and self.pos[0] > self.MIN and self.pos[1] < self.MAXY and self.pos[1] > self.MIN
+
         if edge_mode == 'reflect':
-            #bottom
-            if self.pos[0] > self.MAXY:
+            if self.pos[0] > self.MAXY: #bottom
                 self.pos[0] = self.MAXY
                 self.vel[0] = self.vel[0] * -1
-            elif self.pos[0] <= 0: #TOP
+            elif self.pos[0] <= 0: #top
                 self.pos[0] = 1
                 self.vel[0] = self.vel[0]* -1
             elif self.pos[1] > self.MAXX: #right
@@ -113,6 +147,7 @@ class Particle():
                 self.pos[1] = 1
                 self.vel[1] = self.vel[1] * -1
             return True
+
         if edge_mode == 'pacman':
             if self.pos[0] >= self.MAXY:
                 self.pos[0] = self.MIN+1
@@ -125,6 +160,7 @@ class Particle():
             return True
       
 #see if Kepler's 3rd Law holds  
+#for debugging
 def kepler_check(test_particle,potential, orbits=1,step=0.001,edge_mode='pacman',kind='leapfrog'):
 	y_pos = np.linspace(230,250,10)
 	x_pos = [300 for x in y_pos]
@@ -187,6 +223,8 @@ def kepler_check(test_particle,potential, orbits=1,step=0.001,edge_mode='pacman'
 	plt.title('Kepler 3 Check')
 	plt.savefig('./debug/kepler3_gauss_leapfrog2.png')
 
+#debugging code
+#check to find optimal step size
 def step_check(test_particle,potential,edge_mode='pacman',kind='leapfrog'):
     steps = [.0001, .0005, .001, .005, .01, .05, .1]#, .05, .1]
     steps = [50,10,5,1,.5,.1,.05,.01,.005,.001]#,.0005,.0001]
@@ -235,7 +273,7 @@ def step_check(test_particle,potential,edge_mode='pacman',kind='leapfrog'):
     #basisx = total_posx[0]; basisy = total_posy[0]
 
     
-
+#calculate the potential energy
 def pot_energy(pos1, pos2, mass):
     G = 1#28029.7740431#1#000
     dist = np.sqrt((pos1[0]-pos2[0])**2+ (pos1[1] - pos2[1])**2)
@@ -243,6 +281,7 @@ def pot_energy(pos1, pos2, mass):
         return np.nan
     return -G * float(mass) / (dist**2)
 
+#debugging code to see if energy is conserved
 def energy_check(test_particle,pos=[],masses=[], step=0.001, times = 5000000, edge_mode='reflect',kind='leapfrog2'):
     nrg = []; knrg = []; pnrg = []; rs = []
     k = 0.5*(test_particle.vel[0]**2 + test_particle.vel[1]**2)
@@ -293,23 +332,5 @@ def energy_check(test_particle,pos=[],masses=[], step=0.001, times = 5000000, ed
     #plt.show()
     plt.savefig('/home/gravbox/Desktop/energy_leapfrog.png')
     print masses[0]*knrg[-1]/(1./rs[0] - 1./rs[-1])
-
-
-
-def run_orbit(test_particle, times = 1000,loops=0,step=0.001,edge_mode='pacman',kind='rk4'):
-    num_steps = 0
-    posx = []; posy = []; fmatted = []; energy = []
-    init_pos = np.copy(test_particle.pos)
-    init_vel = np.copy(test_particle.vel)
-    for n in xrange(1, times):
-        if test_particle.is_inbounds(edge_mode):
-            test_particle.update(step,kind)
-            #energy.append(test_particle.energy())
-            fmatted.append((test_particle.pos[0], test_particle.pos[1]))
-            posx.append(test_particle.pos[0])
-            posy.append(test_particle.pos[1])
-        else:
-            break
-    return fmatted
 
 

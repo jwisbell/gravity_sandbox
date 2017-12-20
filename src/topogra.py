@@ -1,19 +1,27 @@
+"""
+Software to interface with Kinect to read in surface topography for Gravbox, an Augmented Reality Gravitational Dynamics Simulation. 
+Calibrates plane of data based on SARndbox calibration files (BoxLayout.txt).
+
+This was developed at the University of Iowa by Jacob Isbell
+    based on work in Dr. Fu's Introduction to Astrophysics class by Jacob Isbell, Sophie Deam, Jianbo Lu, and Tyler Stercula (beta version)
+Version 1.0 - December 2017
+"""
 from freenect import sync_get_depth as get_depth
 import numpy as np
 import scipy.linalg
 import functools
 import scipy.optimize
-#import matplotlib.pyplot as plt
 
 
-PLANE_PARAMS = [0.01,-0.001, 730.]#[0.006452, -0.032609, 712.261579]
+
+PLANE_PARAMS = [0.01,-0.001, 730.] #to be modified slightly for a specific system
 SCALE_FACTOR = 1./50
 
-
-#TODO use BoxLayout.txt? Primary issue is unit scaling 730 -> -96.5
+#roughly 4.5 units per cm
 
 
 def plane(x, y, params):
+    #plane equation for slope subtraction
     a = params[0]
     b = params[1]
     c = params[2]
@@ -59,71 +67,32 @@ def ar_calibration(fname='./aux/BoxLayout.txt'):
     #Z = a*X + b*Y + c
     print vertices[0][0]
 
+    print 'COPY PLANAR_PARAMS to the constant value at the start of this script'
     print 'PLANAR_PARAMS =  [%f, %f, %f]'%(a,b,c)
     print 'BOUNDARIES = [%f,%f],[%f,%f]'%(vertices[0][0],vertices[1][1],vertices[2][0],vertices[2][1])
+    print 'COPY SHAPE to gravbox.py XWIDTH YWIDTH'
     shp = np.zeros( (480,640) )
     bounds = [vertices[1][0],vertices[0][0],vertices[2][1],vertices[1][1]]
     bounds = [40,-30,30,-30]
     print bounds
-    print shp[bounds[0]:bounds[1], bounds[2]:bounds[3]].shape
+    print 'SHAPE: ', shp[bounds[0]:bounds[1], bounds[2]:bounds[3]].shape
+
 
     return generate_baseplane((a,b,c),shp[bounds[0]:bounds[1], bounds[2]:bounds[3]].shape), bounds
 
 
-
-
-
-"""Given a *.npy file of a saved topography (ideally a flat surface), find the parameters of the 
-plane to remove for normalization. Put results in PLANE_PARAMS"""
-def init_calib(fname=None, data=None):
-    if fname != None:
-        data = np.load(fname)
-    # best-fit linear plane
-    # regular grid covering the domain of the data
-
-    badpx = np.where(data==2047)
-    data = data.astype('float32')
-    data[badpx] = np.nan
-    X,Y = np.meshgrid(np.arange(0,data.shape[1]), np.arange(0,data.shape[0]))
-    
-    points =     [(10,10,data[10,10]),
-                (10,data.shape[0]-10,data[10,-10]),
-                (data.shape[1]-10,10,data[-10,10]),
-                (data.shape[1]-10,data.shape[0]-10,data[-10,-10]),
-                (data.shape[1]/2., data.shape[0]/2.,data[data.shape[1]/2., data.shape[0]/2.])]
-
-    fun = functools.partial(error, points=points)
-    params0 = [0, 0, 0]
-    res = scipy.optimize.minimize(fun, params0)
-
-    # evaluate calibration plane on grid
-    a = res.x[0]
-    b = res.x[1]
-    c = res.x[2]
-    Z = a*X + b*Y + c
-
-    surf = np.copy(data) - Z
-
-    print 'PLANAR_PARAMS =  [%f, %f, %f]'%(a,b,c)
-
-
 def calibrate(surface,baseplane,bounds):
-    """Do calibration here - scaling, setting zero point, removing dead pixels, and trimming edges(?)."""
-    
+    """Do calibration here - scaling, setting zero point, removing dead pixels, and trimming edges."""
     surface = surface.astype('float32')
-    #print surface
-    #print surface.shape
-    #print baseplane.shape, 'baseplane'
+    
     #need to remove planar slope
     surface = surface[bounds[0]:bounds[1], bounds[2]:bounds[3]] - baseplane
     BAD_PIX = []#np.where(surface>=200)
     surface *= .1#SCALE_FACTOR
-    #scale
+    #scale exponentially
     x =  np.power(np.e,np.absolute(surface))
     surface = x * np.absolute(surface) / surface * 10
-    #surface -= .25*np.max(surface)
-    
-    #surface = np.negative(surface)
+   
     surface[BAD_PIX] = 0.#np.nan
 
     return np.nan_to_num(surface), BAD_PIX
@@ -145,6 +114,8 @@ def update_surface(baseplane,bounds,prev=None,FLOOR=-600,verbose=False):
         (depth,_)= get_depth()
         d.append(depth)
         #time.sleep()
+    #time average the readings to reduce noise
+    #currently taking mean, maybe switch to median
     depth = np.sum(d[::],axis=0)/10.
     topo,pix = calibrate(depth,baseplane,bounds)
     if verbose:
@@ -160,16 +131,14 @@ def update_surface(baseplane,bounds,prev=None,FLOOR=-600,verbose=False):
     return topo #- np.nanmedian(topo)
 
 
-#roughly 4.5 units per cm
+
 
 """Run the calibration scripts and output a plot showing how well the plane subtraction worked."""
 if __name__ == "__main__":
     from sys import argv
     script, fname = argv
     import matplotlib.pyplot as plt
-    '''init_calib(fname)
-    baseplane = generate_baseplane()
-    test = update_surface(baseplane,None)'''
+    
 
     baseplane, bounds = ar_calibration()
     test = update_surface(baseplane,bounds,None)
@@ -181,5 +150,4 @@ if __name__ == "__main__":
     fig = plt.figure()
     plt.imshow(test)
     plt.show()
-    #init_calib(data=test)
 

@@ -1,10 +1,19 @@
+"""
+Convolution calculation for Gravbox, an Augmented Reality Gravitational Dynamics Simulation. 
+Uses circular convolution theorem to do fast convolutions using Discrete Fourier Transforms.
+
+This was developed at the University of Iowa by Jacob Isbell and Sophie Deam
+    based on work in Dr. Fu's Introduction to Astrophysics class by Jacob Isbell, Sophie Deam, Jianbo Lu, and Tyler Stercula (beta version)
+Version 1.0 - December 2017
+"""
+
 import numpy as np
 from astropy.io import fits
 from scipy.ndimage.interpolation import shift
-#import pyfftw
 import time
-#import wisdom_parse
 from scipy import signal
+#only uncomment if want to use FFTW and will properly load Wisdoms, otherwise this is slower than numpy
+#import pyfftw 
 import matplotlib.pyplot as plt
 
 import warnings
@@ -98,17 +107,7 @@ def convolve2d(arr, x_kernel, y_kernel,method='wrap'):
 		bottom = vals[:,wy/2:]
 		bl = bottom[:wx/2,:]
 		br = bottom[wx/2:,:]
-		#vals = np.zeros(arr.shape)
-		#vals = np.ones(arr.shape)*np.mean(arr)
-
-		'''bck[:wx, :wy] = vals
-		bck[:wx, wy:2*wy] = vals
-		bck[:wx, -wy:] = vals
-		bck[wx:2*wx, :wy] = vals
-		bck[wx:2*wx, -wy:] = vals
-		bck[-wx:, :wy] = vals
-		bck[-wx:, wy:2*wy] = vals
-		bck[-wx:, -wy:] = vals'''
+		
 		bck[:wx/2,:wy/2] = br
 		bck[wx/2:-wx/2, :wy/2] = bottom
 		bck[-wx/2:,:wy/2] = bl
@@ -147,16 +146,12 @@ def convolve2d(arr, x_kernel, y_kernel,method='wrap'):
 		gy = framework[wx/2-yw:wx/2+yw, wy/2-xw:wy/2+xw]
 
 		# --- scale the acceleration fields if necessary and make negative -------
-		#gx = signal.convolve(arr,x_kernel,'same')
-		#gy = signal.convolve(arr,y_kernel,'same') 
 		gx = np.negative(gx)*.6
 		gy = np.negative(gy)*.6
 
 		# Get second order terms for a potential leapfrog improvement
-		#---- d2x and d2y ---
 		g2x, junk = np.gradient(gx)
 		g2y, junk = np.gradient(gy)
-		
 		return gx, gy, g2x, g2x
 
 	else:
@@ -190,8 +185,6 @@ def convolve2d(arr, x_kernel, y_kernel,method='wrap'):
 		gy = framework[wx/2-yw:wx/2+yw, wy/2-xw:wy/2+xw]
 
 		# --- scale the acceleration fields if necessary and make negative -------
-		#gx = signal.convolve(arr,x_kernel,'same')
-		#gy = signal.convolve(arr,y_kernel,'same') 
 		gx = np.negative(gx)*.5
 		gy = np.negative(gy)*.5
 

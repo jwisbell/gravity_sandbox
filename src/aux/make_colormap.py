@@ -1,6 +1,13 @@
-import numpy as np
+"""
+Software to define and save colormaps for Gravbox, an Augmented Reality Gravitational Dynamics Simulation. 
 
-print 'hello'
+This was developed at the University of Iowa by Jacob Isbell
+    based on work in Dr. Fu's Introduction to Astrophysics class by Jacob Isbell, Sophie Deam, Jianbo Lu, and Tyler Stercula (beta version)
+Version 1.0 - December 2017
+"""
+
+
+import numpy as np
 
 def mk_jet():
        #[r,g,b,opacity]
@@ -93,9 +100,9 @@ def mk_geo():
        np.save('cmap_geo.npy',v)    
 
        #remember that spacing isnt linear [-40,-30,-20,-12.5,-.75,-.25,-.05,0,.05,.25,.75,12.5,20,30,40]
-
-mk_jet()
-mk_viridis()
-mk_sauron()
-mk_geo()
+if __name__ == '__main__':
+       mk_jet()
+       mk_viridis()
+       mk_sauron()
+       mk_geo()
 
