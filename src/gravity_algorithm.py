@@ -96,7 +96,7 @@ class Particle():
 
         self.pos = np.copy(new_pos)
         self.vel = np.copy(new_vel)
-	    return new_pos
+	return new_pos
   
 
     def energy(self):
@@ -334,3 +334,20 @@ def energy_check(test_particle,pos=[],masses=[], step=0.001, times = 5000000, ed
     print masses[0]*knrg[-1]/(1./rs[0] - 1./rs[-1])
 
 
+def run_orbit(test_particle, times = 1000,loops=0,step=0.001,edge_mode='pacman',kind='leapfrog2'):
+    #function to actually orbit the particle for times number of iterations
+    #returns list of (x,y) positions
+    num_steps = 0
+    posx = []; posy = []; fmatted = []; energy = []
+    init_pos = np.copy(test_particle.pos)
+    init_vel = np.copy(test_particle.vel)
+    for n in xrange(1, times):
+        if test_particle.is_inbounds(edge_mode):
+            test_particle.update(step,kind)
+            #energy.append(test_particle.energy())
+            fmatted.append((test_particle.pos[0], test_particle.pos[1]))
+            posx.append(test_particle.pos[0])
+            posy.append(test_particle.pos[1])
+        else:
+            break
+    return fmatted

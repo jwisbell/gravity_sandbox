@@ -90,7 +90,7 @@ class AboutScreen(QtGui.QWidget):
         self.exit_button.clicked.connect(self.exit_about)
         self.exit_button.move(425 + 425/2,600)
 
-        self.uiowa_button = QtGui.QPushButton('UIowa',self)
+        self.uiowa_button = PicButton('UIowa',QtGui.QPixmap('./aux/assets/uiowa.png'),self)
         self.uiowa_button.setGeometry(0,0,125,50)
         self.uiowa_button.clicked.connect(self.open_uiowa)
         self.uiowa_button.move(425/2,600)
@@ -147,7 +147,7 @@ class UIowaScreen(QtGui.QWidget):
         self.exit_button.clicked.connect(self.exit_about)
         self.exit_button.move(425+425/2,600)
 
-        self.uiowa_button = QtGui.QPushButton('About',self)
+        self.uiowa_button = PicButton('UIowa',QtGui.QPixmap('./aux/assets/about.png'),self)
         self.uiowa_button.setGeometry(0,0,125,50)
         self.uiowa_button.clicked.connect(self.open_uiowa)
         self.uiowa_button.move(425/2,600)
