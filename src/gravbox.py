@@ -320,7 +320,7 @@ class GravityThread(QtCore.QThread):
                 #if idle_time has passed since last new input, start idle mode and raise welcome screen to top
                 if time.time() - last_idle >= args.idle_time:
                     self.idle=True
-                    self.parent().WelcomeScreen.raise_()
+                    #self.parent().WelcomeScreen.raise_()
             else:
                 #IDLE MODE - only update topography 
 
@@ -530,7 +530,10 @@ class Surface(QtGui.QWidget):
         if TRACE_BOOL:
             #if trace enabled (and trace values exist), set those pixels on the surface to a constant value
             if len(self.tracex) > 1:
-                self.data[np.nan_to_num(self.tracex).astype(int),np.nan_to_num(self.tracey).astype(int)] = 0.
+                try:
+                    self.data[np.nan_to_num(self.tracex).astype(int),np.nan_to_num(self.tracey).astype(int)] = 0.
+                except:
+                    print ''
 
         #once all modifications are done, set the plot data as the surface
         self.img.setImage(self.data)

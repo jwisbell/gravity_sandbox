@@ -13,7 +13,7 @@ import scipy.optimize
 
 
 
-PLANE_PARAMS = [0.01,-0.001, 730.] #to be modified slightly for a specific system
+PLANE_PARAMS = [0.01,-0.001, 724.] #to be modified slightly for a specific system
 SCALE_FACTOR = 1./50
 
 #roughly 4.5 units per cm
@@ -42,7 +42,7 @@ def ar_calibration(fname='./aux/BoxLayout.txt'):
     lines = f.readlines()
     plane = lines[0].split('(')[1].split(')')[0].split(',')
     plane = np.array(plane,dtype=float)
-    factor = 730./float(lines[0].split(')')[1].split(',')[1])
+    factor = 724./float(lines[0].split(')')[1].split(',')[1])
     vertices = []
     for k in range(1,len(lines)-1):
         l = lines[k]
@@ -62,7 +62,7 @@ def ar_calibration(fname='./aux/BoxLayout.txt'):
 
     a = plane[0]#factor
     b = plane[1]#*factor
-    c = 730.
+    c = 724.
     #Z = a*X + b*Y + c
     print vertices[0][0]
 
@@ -115,14 +115,14 @@ def update_surface(baseplane,bounds,prev=None,FLOOR=-600,verbose=False):
         #time.sleep()
     #time average the readings to reduce noise
     #currently taking mean, maybe switch to median
-    depth = np.sum(d[::],axis=0)/10.
+    depth = np.median(d[::],axis=0)#/10.
     topo,pix = calibrate(depth,baseplane,bounds)
     if verbose:
         print 'SURFACE STATS'
         print np.mean(topo), np.max(topo),np.min(topo), np.median(topo)
     #if there are enough pixels above a threshold, ignore and show previous topo
     #this is useful when hands are in the sandbox
-    if len(np.where(topo<FLOOR)[0]) + len(np.where(topo<FLOOR)[1]) > 20:
+    if len(np.where(topo<FLOOR)[0]) + len(np.where(topo<FLOOR)[1]) > 20 or np.mean(topo) > 1e3: 
         if prev == None:
             return topo #- np.nanmedian(topo)
         else:
