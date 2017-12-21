@@ -86,7 +86,7 @@ def calibrate(surface,baseplane,bounds):
     
     #need to remove planar slope
     surface = surface[bounds[0]:bounds[1], bounds[2]:bounds[3]] - baseplane
-    BAD_PIX = []#np.where(surface>=200)
+    BAD_PIX = np.where(surface>=200)
     surface *= .1#SCALE_FACTOR
     #scale exponentially
     x =  np.power(np.e,np.absolute(surface))
@@ -105,7 +105,7 @@ def generate_baseplane(params,shape=(580,410)):
     return Z
 
 
-def update_surface(baseplane,bounds,prev=None,FLOOR=-600,verbose=False):
+def update_surface(baseplane,bounds,prev=None,FLOOR=-650,verbose=False):
     """Read updated topography and calibrate for use"""
     #(depth,_)= get_depth()
     d = []
