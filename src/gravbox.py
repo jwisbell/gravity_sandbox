@@ -119,7 +119,7 @@ class UIowaScreen(QtGui.QWidget):
         self.setGeometry(0,0,900,700)
 
         self.aboutText = QtGui.QLabel(self)
-        self.rawtext = "\tGravBox was developed at the University of Iowa, and \n\twas supported by NSF-Grant ASTR-1614326 (PI: Hai Fu).\n\n    -Engineering Team: Wyatt Bettis, Sadie Moore, and Ross McCurty \n\n    -Interface Team: Zachary Luppen, Erin Maier, and Mason Reed \n\n    -Algorithm Team: Sophie Deam, Jacob Isbell, Jianbo Lu \n\n\tFollow the QR Code for more information about the University. "
+        self.rawtext = "\tGravBox was developed at the University of Iowa, and \n\twas supported by NSF-Grant ASTR-1614326 (PI: Hai Fu).\n\n    -Engineering Team: Wyatt Bettis, Sadie Moore, and Ross McCurdy \n\n    -Interface Team: Zachary Luppen, Erin Maier, and Mason Reed \n\n    -Algorithm Team: Sophie Deam, Jacob Isbell, Jianbo Lu \n\n\tFollow the QR Code for more information about the University. "
         self.aboutText.setText(self.rawtext)
         self.aboutText.setGeometry(0,0,850,800)
         self.aboutText.move(75,0)
@@ -987,7 +987,7 @@ class Display(QtGui.QWidget):
             #if the user is inputting a new initial vector, plot a red line from start_pos to the current cursor location
             self.current_pos = [(self.pp.pos().x()-409)/float(1508.), (self.pp.pos().y())/float(1080.)]
             self.surface1._update_pos([YWIDTH-self.start_pos[0]*YWIDTH,YWIDTH-self.current_pos[0]*YWIDTH],[self.start_pos[1]*XWIDTH,self.current_pos[1]*XWIDTH],color='r')
-            self.surface2._update_pos([580*2-self.start_pos[0]*580*2,580-self.current_pos[0]*580],[self.start_pos[1]*410,self.current_pos[1]*410],color='r')
+            self.surface2._update_pos([580-self.start_pos[0]*580,580-self.current_pos[0]*580],[self.start_pos[1]*410,self.current_pos[1]*410],color='r')
 
           #repeat this function call every 6.5 ms
           QtCore.QTimer.singleShot(6.5, self._update)
