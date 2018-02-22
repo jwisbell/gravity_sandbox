@@ -192,7 +192,7 @@ def convolve2d(arr, x_kernel, y_kernel,method='wrap'):
 		g2x, junk = np.gradient(gx)
 		g2y, junk = np.gradient(gy)
 		
-		return gx, gy, g2x, g2x
+		return gx, gy, g2x, g2y
 
 	
 
