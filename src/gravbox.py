@@ -61,7 +61,7 @@ def load_data():
         except:
             i += 1
 
-#x, y, bg = load_data()
+x, y, bg = load_data()
 
 """Class containing the popup window with "about" information. Called from WelcomeScreen or Display. Not deleted on exit, just pushed to back. """
 class AboutScreen(QtGui.QWidget):
@@ -112,46 +112,40 @@ class AboutScreen(QtGui.QWidget):
 class DemoScreen(QtGui.QWidget):
      def __init__(self, parent=None):
         super(DemoScreen,self).__init__(parent)
-        self.image_list = ['./aux/assets/back.png']
+        self.image_list = ['./aux/assets/slide1.png','./aux/assets/slide2.png','./aux/assets/slide3.png','./aux/assets/slide4.png','./aux/assets/slide5.png']
         #### Create Gui Elements ###########
         self.mainbox = QtGui.QWidget()
         self.setLayout(QtGui.QGridLayout())
 
-        self.setGeometry(0,0,900,700)
-
-        self.aboutText = QtGui.QLabel(self)
-        self.rawtext = ""#"\tGravBox is the Augmented Reality (AR) Sandbox for gravitational \n\tdynamics simulations designed and built by Dr. Hai Fu's Introd-\n\tuction to Astrophysics class during the 2016-2017 academic year \n\tand beyond.\n\n\tAR Sandbox is the result of an NSF-funded project on informal \n\tscience education for freshwater lake and watershed science \n\tdeveloped by the UC Davis' W.M. Keck Center for Active Visual-\n\tization in the Earth Sciences (KeckCAVES), together with the UC \n\tDavis Tahoe Environmental Research Center, Lawrence Hall of \n\tScience, and ECHO Lake Aquarium and Science Center."
-        self.aboutText.setText(self.rawtext)
-        self.aboutText.setGeometry(0,0,850,800)
-        self.aboutText.move(75,0)
+        self.setGeometry(0,0,1160*4/3.,1160)
 
         self.logo = QtGui.QLabel(self)
         self.logo.setPixmap(QtGui.QPixmap(self.image_list[0]))
-        self.logo.setGeometry(0,0,850,800)
-        self.logo.move(75,0)
+        self.logo.setGeometry(0,0,1160*4/3.,1160)
+        self.logo.move(0,0)
         self.logo.setScaledContents(True)
 
-        self.exit_button = PicButton('Close', QtGui.QPixmap('./aux/assets/close.png'),self)
+        self.exit_button = PicButton('Exit', QtGui.QPixmap('./aux/assets/exit.png'),self)
         self.exit_button.setGeometry(0,0,125,50)
         self.exit_button.clicked.connect(self.exit_demo)
-        self.exit_button.move(425 + 425/2,600)
+        self.exit_button.move(600/2,1050)
 
-        self.cycle_button = PicButton('Next',QtGui.QPixmap('./aux/assets/uiowa.png'),self)
+        self.cycle_button = PicButton('Next',QtGui.QPixmap('./aux/assets/next.png'),self)
         self.cycle_button.setGeometry(0,0,125,50)
         self.cycle_button.clicked.connect(self.cycle)
-        self.cycle_button.move(425/2,600)
+        self.cycle_button.move(600+600/2,1050)
         self.cycle_loc = 0
 
-        self.aboutText.setAutoFillBackground(True)
+        #self.aboutText.setAutoFillBackground(True)
         #set the font
-        self.aboutText.setStyleSheet("background-color:  #1b1c1d;  color:#fcfcff;font-size:22px; QLabel {font-family:Droid Sans; font-size:22px; color: #fcfcff;} QPushbutton {font-family:Droid Sans; font-size:14px;}")
+        #self.aboutText.setStyleSheet("background-color:  #1b1c1d;  color:#fcfcff;font-size:22px; QLabel {font-family:Droid Sans; font-size:22px; color: #fcfcff;} QPushbutton {font-family:Droid Sans; font-size:14px;}")
 
      def exit_demo(self):
         #don't delete the element, hide it behind the others for fast loading and constant memory use
         self.lower()
 
      def cycle(self):
-        if self.cycle_loc >= 2:
+        if self.cycle_loc >= len(self.image_list)-1:
             self.cycle_loc = 0
         else:
             self.cycle_loc += 1
@@ -485,7 +479,7 @@ class Surface(QtGui.QWidget):
         pos2 = np.linspace(-0.005,.9,len(r2)-1)
         pos2= np.append(pos2, np.array([-1]))
         self.cmap2 = pg.ColorMap(pos2, r2)
-        self.lut2 = self.cmap2.getLookupTable(0,.85,512)
+        self.lut2 = self.cmap2.getLookupTable(-.9,1)
         self.lut2c = self.cmap2.getLookupTable(0.1,.95,512)
 
         r4 = cmap_sauron
@@ -801,10 +795,12 @@ class Display(QtGui.QWidget):
         self.about.move(1920/2. -350,1080/2.-350)
         self.uiowa = UIowaScreen(self)
         self.uiowa.move(1920/2. -350,1080/2.-350)
+        self.demo = DemoScreen(self)
+        self.demo.move(390,-42)#1920/2. -350,1080/2.-350)
 
         ### PLOTTING WIDGET(S) ####
-        self.lmargin = 0; self.rmargin = 30; self.tmargin = -5; self.bmargin = 40;
-        self.xstart = -40; self.ystart = -20; self.xspan = 1280; self.yspan = 860
+        self.lmargin = 10; self.rmargin = 20; self.tmargin = 0; self.bmargin = 30;
+        self.xstart = -30; self.ystart = -10; self.xspan = 1290; self.yspan = 870
         self.surface1 = Surface(self, aspectLock=False)#, lmargin=self.lmargin,rmargin=self.rmargin, tmargin=self.tmargin, bmargin=self.bmargin, xstart=self.xstart,ystart=self.ystart,xspan=self.xspan,yspan=self.yspan)#Surface(self)
         self.surface2 = Surface(self, aspectLock=False, lmargin=self.lmargin,rmargin=self.rmargin, tmargin=self.tmargin, bmargin=self.bmargin, xstart=self.xstart,ystart=self.ystart,xspan=self.xspan,yspan=self.yspan)#surface1
         self.surface1.move(390,-42)
@@ -847,11 +843,17 @@ class Display(QtGui.QWidget):
         self.about_button.setStyleSheet('font-size:24px;')
         self.about_button.move(80,720-50)
 
+        self.about_button = PicButton('Demo', QtGui.QPixmap("./aux/assets/demos.png"),self)
+        self.about_button.clicked.connect(self.open_demo)
+        self.about_button.setGeometry(0,0,250,100)
+        self.about_button.setStyleSheet('font-size:24px;')
+        self.about_button.move(80,850)
+
         self.sarndbox_button = PicButton('Sarndbox', QtGui.QPixmap("./aux/assets/sarndbox.png"),self)
         self.sarndbox_button.clicked.connect(self.start_sarndbox)
-        self.sarndbox_button.setGeometry(0,0,250,100)
+        self.sarndbox_button.setGeometry(0,0,150,50)
         self.sarndbox_button.setStyleSheet('font-size:24px;')
-        self.sarndbox_button.move(80,900-50)
+        self.sarndbox_button.move(125,1000)#-50)
 
 
         if args.calibrate:
@@ -897,8 +899,9 @@ class Display(QtGui.QWidget):
         self.setMouseTracking(True)
         self.pp = QtGui.QCursor()
         self.start = time.time()
-        self.home.raise_()
+        self.home.lower()#raise_()
         self.about.lower()
+        self.demo.lower()
         self._update()
 
 
@@ -955,6 +958,10 @@ class Display(QtGui.QWidget):
     def open_about(self):
         #open the about screen
         self.about.raise_()
+
+    def open_demo(self):
+        #open the demo screen
+        self.demo.raise_()
 
         
     def start_sarndbox(self):
