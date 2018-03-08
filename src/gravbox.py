@@ -42,26 +42,9 @@ cmap_sauron = np.load('./aux/cmap_sauron.npy')
 cmap_geo = np.load('./aux/cmap_geo.npy')
 
 
-#I think this can be removed
-def load_data():
-    """Load the output from the orbit calculation. If there is currently no file, wait indefinitely. """ 
-    i = 0
-    while i<1e6:
-        try:
-            x, y = np.load('algorithm_output.npy')
-            x_scaled = x * YWIDTH - 7
-            y_scaled = 600- (y * XWIDTH) - 12
-            x = x_scaled ; y = y_scaled
-            bg = np.load('display_dem.npy') / scaling
-            #bg = np.zeros(bg.shape)
-            bg[0,0] = -40
-            bg[0,1] = 1
-            #subprocess.call('rm algorithm_output.npy',shell=True)
-            return x, y, bg#, np.load('contours.npy')
-        except:
-            i += 1
-
-x, y, bg = load_data()
+#initialize the important arrays used in all classes
+x = np.zeros(50); y = np.zeros(50)
+bg = np.zeros((640,480))
 
 """Class containing the popup window with "about" information. Called from WelcomeScreen or Display. Not deleted on exit, just pushed to back. """
 class AboutScreen(QtGui.QWidget):
