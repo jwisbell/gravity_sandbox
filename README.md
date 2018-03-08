@@ -18,7 +18,7 @@ While gravitational interactions are the most important processes in astronomy, 
 
 GravBox uses a Kinect camera to read a real sand topography and convert it into an acceleration field. A number of test particles can then be orbited through this field in real time, responding to changes in the sand surface. This allows students to gain a better intuition for the complex gravitational fields and mass distributions that fill the Universe. 
 
-See our website for more information: Coming Soon!
+See our website for more information: http://astro.physics.uiowa.edu/gravbox/
 
 Requirements
 ------------
@@ -39,6 +39,7 @@ Packages:
 - libfreenect
 - pyqtgraph
 - pyfftw (Optional)
+- libusb
 
 It may be useful (and FUN!) to install the AR Sandbox created at UC Davis (https://arsandbox.ucdavis.edu/)
 
