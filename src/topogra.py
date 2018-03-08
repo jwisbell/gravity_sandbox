@@ -47,11 +47,9 @@ def ar_calibration(fname='./aux/BoxLayout.txt'):
     for k in range(1,len(lines)-1):
         l = lines[k]
         if len(l)>1:
-            print l.strip('(')
             d = l.strip('(')
             d = d.strip(')')[:-2]
             data = d.strip().split(',')
-            print data[0], 'here'
             x = float(data[0])
             y = float(data[1])
             z = float(data[2])*factor
@@ -122,11 +120,16 @@ def update_surface(baseplane,bounds,prev=None,FLOOR=-650,verbose=False):
         print np.mean(topo), np.max(topo),np.min(topo), np.median(topo)
     #if there are enough pixels above a threshold, ignore and show previous topo
     #this is useful when hands are in the sandbox
-    if len(np.where(topo<FLOOR)[0]) + len(np.where(topo<FLOOR)[1]) > 20 or np.mean(topo) > 1e3: 
+    if len(np.where(topo<FLOOR)[0]) + len(np.where(topo<FLOOR)[1]) > 10:# or np.mean(topo) > 1e3: 
         if prev == None:
             return topo #- np.nanmedian(topo)
         else:
-            return prev
+            a = np.zeros(prev.shape)
+            b = np.ones(prev.shape)
+            a[np.where(topo<FLOOR)] = 1
+            b[np.where(topo<FLOOR)] = 0
+
+            return prev*a + topo*b
     return topo #- np.nanmedian(topo)
 
 

@@ -61,7 +61,7 @@ def load_data():
         except:
             i += 1
 
-x, y, bg = load_data()
+#x, y, bg = load_data()
 
 """Class containing the popup window with "about" information. Called from WelcomeScreen or Display. Not deleted on exit, just pushed to back. """
 class AboutScreen(QtGui.QWidget):
@@ -107,6 +107,58 @@ class AboutScreen(QtGui.QWidget):
         #open the uiowa popup window by placing it on top of this one. Send this window to the back.
         self.lower()
         self.parent().uiowa.raise_()
+
+"""Class containing the popup window with text for running a demonstration - contains images and descriptions of situations that students can replicate on the Gravbox."""
+class DemoScreen(QtGui.QWidget):
+     def __init__(self, parent=None):
+        super(DemoScreen,self).__init__(parent)
+        self.image_list = ['./aux/assets/back.png']
+        #### Create Gui Elements ###########
+        self.mainbox = QtGui.QWidget()
+        self.setLayout(QtGui.QGridLayout())
+
+        self.setGeometry(0,0,900,700)
+
+        self.aboutText = QtGui.QLabel(self)
+        self.rawtext = ""#"\tGravBox is the Augmented Reality (AR) Sandbox for gravitational \n\tdynamics simulations designed and built by Dr. Hai Fu's Introd-\n\tuction to Astrophysics class during the 2016-2017 academic year \n\tand beyond.\n\n\tAR Sandbox is the result of an NSF-funded project on informal \n\tscience education for freshwater lake and watershed science \n\tdeveloped by the UC Davis' W.M. Keck Center for Active Visual-\n\tization in the Earth Sciences (KeckCAVES), together with the UC \n\tDavis Tahoe Environmental Research Center, Lawrence Hall of \n\tScience, and ECHO Lake Aquarium and Science Center."
+        self.aboutText.setText(self.rawtext)
+        self.aboutText.setGeometry(0,0,850,800)
+        self.aboutText.move(75,0)
+
+        self.logo = QtGui.QLabel(self)
+        self.logo.setPixmap(QtGui.QPixmap(self.image_list[0]))
+        self.logo.setGeometry(0,0,850,800)
+        self.logo.move(75,0)
+        self.logo.setScaledContents(True)
+
+        self.exit_button = PicButton('Close', QtGui.QPixmap('./aux/assets/close.png'),self)
+        self.exit_button.setGeometry(0,0,125,50)
+        self.exit_button.clicked.connect(self.exit_demo)
+        self.exit_button.move(425 + 425/2,600)
+
+        self.cycle_button = PicButton('Next',QtGui.QPixmap('./aux/assets/uiowa.png'),self)
+        self.cycle_button.setGeometry(0,0,125,50)
+        self.cycle_button.clicked.connect(self.cycle)
+        self.cycle_button.move(425/2,600)
+        self.cycle_loc = 0
+
+        self.aboutText.setAutoFillBackground(True)
+        #set the font
+        self.aboutText.setStyleSheet("background-color:  #1b1c1d;  color:#fcfcff;font-size:22px; QLabel {font-family:Droid Sans; font-size:22px; color: #fcfcff;} QPushbutton {font-family:Droid Sans; font-size:14px;}")
+
+     def exit_demo(self):
+        #don't delete the element, hide it behind the others for fast loading and constant memory use
+        self.lower()
+
+     def cycle(self):
+        if self.cycle_loc >= 2:
+            self.cycle_loc = 0
+        else:
+            self.cycle_loc += 1
+
+        #update the display to show the image at index cycle_loc
+        fname = self.image_list[self.cycle_loc]
+        self.logo.setPixmap(QtGui.QPixmap(fname))
 
 """Class containing the popup window with information about the team. Called from WelcomeScreen or About. Not deleted on exit, just pushed to back. """
 class UIowaScreen(QtGui.QWidget):
@@ -178,7 +230,7 @@ class WelcomeScreen(QtGui.QWidget):
 
         self.setGeometry(0,0,1920,1080)
 
-        ###LAYOUT THE DSIPLAY ###
+        ###LAYOUT OF THE DSIPLAY ###
         self.bck=QtGui.QLabel(self)
         self.bck.setPixmap(QtGui.QPixmap('./aux/assets/homescreen.png')) #Created by Jeremy Swanson
         self.bck.setGeometry(0,0,1920,1080)
@@ -250,7 +302,7 @@ class GravityThread(QtCore.QThread):
                 return True
         return False
     
-    def run(self):
+    def run(self, verbose=False):
         #computation loop. Called immediately after __init__() to start thread
 
         last_idle = time.time() #time that idle mode ended, for use in checking elapsed time
@@ -258,7 +310,11 @@ class GravityThread(QtCore.QThread):
             start_loop = time.time()
             if not self.idle:
                 # Load in surface
-                scaled_dem_array = topo.update_surface(self.baseplane,self.bounds, self.prev_dem, verbose=True) 
+                try:
+                    scaled_dem_array = topo.update_surface(self.baseplane, self.bounds,self.prev_dem,verbose=True)
+                except:
+                    print 'ERROR READING KINECT DATA - Try restarting your terminal to free up USB ports. If this persists, check your libusb installation.'
+                    sys.exit()
                 self.prev_dem = scaled_dem_array
                 
                 xw = scaled_dem_array.shape[1]; yw = scaled_dem_array.shape[0]
@@ -267,7 +323,8 @@ class GravityThread(QtCore.QThread):
                 shp = scaled_dem_array.shape
                 conv_start = time.time()
                 gx,gy, g2x, g2y = convolution.convolve2d(scaled_dem_array, X_KERNEL,Y_KERNEL,method='wrap')
-                print 'Convolution took ', time.time()-conv_start
+                if verbose:
+                    print 'Convolution took ', time.time()-conv_start
                 
                 #Create the particle
                 particle = gravity_algorithm.Particle(self.current_pos, np.array(self.current_vel), (gx,gy),g2x,g2y)
@@ -286,7 +343,8 @@ class GravityThread(QtCore.QThread):
                 to_send = gravity_algorithm.run_orbit(particle, 1500, loops=0,step=0.001,edge_mode='reflect',kind='leapfrog2') #run for 1000 iterations and save the array
                 posx = [val[0] for val in to_send]
                 posy = [val[1] for val in to_send]
-                print 'Calculation took ', time.time()-calc_start
+                if verbose:
+                    print 'Calculation took ', time.time()-calc_start
 
                 input_pos, input_vel = self.in_pos, self.in_vel
                 #check for inputs
@@ -315,7 +373,8 @@ class GravityThread(QtCore.QThread):
                     print ''
 
                 dt = time.time()-start_loop
-                print 'LOOP TOOK: ', dt
+                if verbose:
+                    print 'LOOP TOOK: ', dt
 
                 #if idle_time has passed since last new input, start idle mode and raise welcome screen to top
                 if time.time() - last_idle >= args.idle_time:
@@ -332,7 +391,11 @@ class GravityThread(QtCore.QThread):
                     continue
 
                 #update surface
-                scaled_dem_array = topo.update_surface(self.baseplane, self.bounds,self.prev_dem,verbose=True)
+                try:
+                    scaled_dem_array = topo.update_surface(self.baseplane, self.bounds,self.prev_dem,verbose=True)
+                except:
+                    print 'ERROR READING KINECT DATA - Try restarting your terminal to free up USB ports. If this persists, check your libusb installation.'
+                    sys.exit()
                 self.prev_dem = scaled_dem_array
                 scaled_dem_array = self.normalize_bg(scaled_dem_array)
 
@@ -1021,7 +1084,7 @@ class Display(QtGui.QWidget):
                 TRACE_LENGTH = 0
             #wait an amount of time so that animating is smooth and consistent
             try:
-                print time.time() - self.start,  'ANIMATING TOOK'
+                #print time.time() - self.start,  'ANIMATING TOOK'
                 time.sleep(.9 - (time.time() - self.start))
                 self.counter = 0
                 self.x = self.x[100:]
@@ -1029,7 +1092,7 @@ class Display(QtGui.QWidget):
                 self.start = time.time()
             except:
                 self.counter = 0
-                print time.time() - self.start,  'ANIMATING TOOK'
+                #print time.time() - self.start,  'ANIMATING TOOK'
                 self.x = self.x[100:]
                 self.y = self.y[100:]
                 self.start = time.time()
@@ -1043,10 +1106,7 @@ parser.add_argument("-i", "--idle", dest="idle_time", default=180., type=float, 
 parser.add_argument("-t", "--timing", dest="INT_SECONDS", default=3.5, type=float, help="Set the number of seconds per iteration you would like (default 3.5)")
 parser.add_argument("-s", "--speed", dest="vel_scaling", type=float, default=.5, help="Set a scaling factor for the input velocities (default 1.0)")
 parser.add_argument("-c", "--contours", dest="cont_on", type=int, default=0, help="Turns the contours on (1) or off (0). Default is on.")
-parser.add_argument("-d", "--debug", dest="debug", type=int, default=0, help="Use a pre-made density field for testing purposes. Disables tablet I/O. 1 for on, 0 for off.")
-parser.add_argument("-v", "--verbose", dest="verbose", type=bool, default=False, help="Save a plot displaying the potential field. (default False)")
 parser.add_argument("-a", "--audio", dest="music", type=bool, default=False, help="Play appropriate music. (default False)")
-parser.add_argument("-m", "--colormap", dest="cmap_name", type=str, default='jet', help="Name of the colormap. Options are 'jet' and 'viridis'. Default is 'jet'.")
 parser.add_argument("-q", "--second_display", dest="second_display", type=int, default=0,help="Display on a second monitor? Yes (1), No (0). Default no.")
 parser.add_argument("-b", "--calibrate", dest="calibrate", type=bool, default=False,help="Display calibration gui? Default False")
 

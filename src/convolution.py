@@ -92,8 +92,6 @@ def convolve2d(arr, x_kernel, y_kernel,method='wrap'):
 	#Do the convolution using numpy -  faster than FFTW in this case
 	elif method=='wrap':
 		bck = np.zeros( (arr.shape[0]*2, arr.shape[1]*2) )
-		print bck.shape
-		print arr.shape
 		wx = arr.shape[0]; wy =arr.shape[1]
 		#the middle section is the array we care about
 		bck[wx/2:-wx/2, wy/2:-wy/2] = arr
