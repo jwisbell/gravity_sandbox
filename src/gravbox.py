@@ -738,6 +738,7 @@ class Settings(QtGui.QWidget):
 
         self.parent().lmargin,self.parent().rmargin,self.parent().tmargin,self.parent().bmargin,self.parent().xstart,self.parent().ystart,self.parent().xspan,self.parent().yspan = self.params
         self.parent().need_new =True
+        np.save('calibration_params.npy',self.params)
 
 
 """Custom version of PushButton that uses our own assets as pixmaps """
@@ -801,6 +802,7 @@ class Display(QtGui.QWidget):
         ### PLOTTING WIDGET(S) ####
         self.lmargin = 10; self.rmargin = 20; self.tmargin = 0; self.bmargin = 30;
         self.xstart = -30; self.ystart = -10; self.xspan = 1290; self.yspan = 870
+        #self.lmargin, self.rmargin, self.tmargin, self. bmargin, self.xstart, self.ystart, self.xspan, self.yspan = np.load('calibration_params.npy')
         self.surface1 = Surface(self, aspectLock=False)#, lmargin=self.lmargin,rmargin=self.rmargin, tmargin=self.tmargin, bmargin=self.bmargin, xstart=self.xstart,ystart=self.ystart,xspan=self.xspan,yspan=self.yspan)#Surface(self)
         self.surface2 = Surface(self, aspectLock=False, lmargin=self.lmargin,rmargin=self.rmargin, tmargin=self.tmargin, bmargin=self.bmargin, xstart=self.xstart,ystart=self.ystart,xspan=self.xspan,yspan=self.yspan)#surface1
         self.surface1.move(390,-42)
