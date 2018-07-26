@@ -28,6 +28,8 @@ XWIDTH = 410.# height of the plot for animation
 y0 = 0# top boundary of plot
 x0 = 186+18# left boundary of plot
 
+ORIENTATION = 'normal'
+
 #convolution kernels
 X_KERNEL =  np.load('./aux/dx_dft.npy')
 Y_KERNEL = np.load('./aux/dy_dft.npy') 
@@ -607,7 +609,9 @@ class Surface(QtGui.QWidget):
                 #if there hasn't been a first click, set pressed to true and keep start position
                 self.pressed =True
                 self.parent().pressed = True
-                self.start_pos = [(pos.x()-22)/1500., (pos.y()-10)/1140.]
+                self.start_pos = [(pos.x()-22)/1500., (1140-(pos.y()-10))/1140.]
+                if ORIENTATION == 'flipped':
+                    self.start_pos = [(1500-(pos.x()-490))/1500., (1140-(pos.y()-10))/1140]
                 self.parent().start_pos = self.start_pos
                 self.parent().toggle_trace()
                 self.emit(QtCore.SIGNAL('clear data')) #clear the data so that only the mouse position, rather than the orbit, is displayed
@@ -615,7 +619,9 @@ class Surface(QtGui.QWidget):
             elif self.pressed:
                 #if there's been a click, then this is the second click so keep the final position and start a new computation
                 self.pressed=False
-                self.end_pos = [(pos.x()-22)/1500., (pos.y()-10)/1140.]
+                self.end_pos = [(pos.x()-22)/1500., (1140-(pos.y()-10))/1140.]
+                if ORIENTATION == 'flipped':
+                    self.end_pos = [(1500-(pos.x()-490))/1500., (1140-(pos.y()-10))/1140]
                 self.tracex= []; self.tracey=[]
                 self.emit(QtCore.SIGNAL('clear data'),self.start_pos)
                 #send a signal to parent with start and end positions
@@ -792,6 +798,9 @@ class Display(QtGui.QWidget):
         self.surface1.raise_()
         self.surface2.move(1920-30,-20)
         self.surface2.lower()
+        if ORIENTATION == 'flipped':
+            self.surface1.view.invertY()
+            self.surface1.view.invertX()
         self.need_new =False
 
 
@@ -1040,7 +1049,9 @@ class Display(QtGui.QWidget):
 
           if self.pressed:
             #if the user is inputting a new initial vector, plot a red line from start_pos to the current cursor location
-            self.current_pos = [(self.pp.pos().x()-409)/float(1508.), (self.pp.pos().y())/float(1080.)]
+            self.current_pos = [(self.pp.pos().x()-409)/float(1508.), (1080-self.pp.pos().y())/float(1080.)]
+            if ORIENTATION == 'flipped':
+                self.current_pos = [(1508-(self.pp.pos().x()-409))/float(1508.), (1080-self.pp.pos().y())/float(1080.)]
             self.surface1._update_pos([YWIDTH-self.start_pos[0]*YWIDTH,YWIDTH-self.current_pos[0]*YWIDTH],[self.start_pos[1]*XWIDTH,self.current_pos[1]*XWIDTH],color='r')
             self.surface2._update_pos([580-self.start_pos[0]*580,580-self.current_pos[0]*580],[self.start_pos[1]*410,self.current_pos[1]*410],color='r')
 
@@ -1099,7 +1110,7 @@ parser.add_argument("-t", "--timing", dest="INT_SECONDS", default=3.5, type=floa
 parser.add_argument("-s", "--speed", dest="vel_scaling", type=float, default=.5, help="Set a scaling factor for the input velocities (default 1.0)")
 parser.add_argument("-c", "--contours", dest="cont_on", type=int, default=0, help="Turns the contours on (1) or off (0). Default is on.")
 parser.add_argument("-a", "--audio", dest="music", type=bool, default=False, help="Play appropriate music. (default False)")
-parser.add_argument("-q", "--second_display", dest="second_display", type=int, default=0,help="Display on a second monitor? Yes (1), No (0). Default no.")
+#parser.add_argument("-q", "--second_display", dest="second_display", type=int, default=0,help="Display on a second monitor? Yes (1), No (0). Default no.")
 parser.add_argument("-b", "--calibrate", dest="calibrate", type=bool, default=False,help="Display calibration gui? Default False")
 
 #boilerplate code, initialize the Display widget and start the program

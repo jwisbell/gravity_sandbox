@@ -60,7 +60,7 @@ def ar_calibration(fname='./aux/BoxLayout.txt'):
 
     a = plane[0]#factor
     b = plane[1]#*factor
-    c = plane[2]
+    c = 724.
     #Z = a*X + b*Y + c
     print vertices[0][0]
 
@@ -70,7 +70,7 @@ def ar_calibration(fname='./aux/BoxLayout.txt'):
     print 'COPY SHAPE to gravbox.py XWIDTH YWIDTH'
     shp = np.zeros( (480,640) )
     bounds = [vertices[1][0],vertices[0][0],vertices[2][1],vertices[1][1]]
-    #bounds = [40,-30,30,-30]
+    bounds = [40,-30,30,-30]
     print bounds
     print 'SHAPE: ', shp[bounds[0]:bounds[1], bounds[2]:bounds[3]].shape
 
