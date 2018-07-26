@@ -103,7 +103,7 @@ def generate_baseplane(params,shape=(580,410)):
     return Z
 
 
-def update_surface(baseplane,bounds,prev=None,FLOOR=-650,verbose=False):
+def update_surface(baseplane,bounds,prev=None,FLOOR=-500,verbose=False):
     """Read updated topography and calibrate for use"""
     #(depth,_)= get_depth()
     d = []
@@ -117,7 +117,7 @@ def update_surface(baseplane,bounds,prev=None,FLOOR=-650,verbose=False):
     topo,pix = calibrate(depth,baseplane,bounds)
     if verbose:
         print 'SURFACE STATS'
-        print np.mean(topo), np.max(topo),np.min(topo), np.median(topo)
+        print 'MEAN: %f \t MAX: %f\t MIN: %f\t MEDIAN: %f \n'%(np.mean(topo), np.max(topo),np.min(topo), np.median(topo) )
     #if there are enough pixels above a threshold, ignore only those and show masked linear combo. of previous and new topos
     #this is useful when hands are in the sandbox
     if len(np.where(topo<FLOOR)[0]) + len(np.where(topo<FLOOR)[1]) > 10:# or np.mean(topo) > 1e3: 
