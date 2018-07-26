@@ -893,7 +893,7 @@ class Display(QtGui.QWidget):
         self.setMouseTracking(True)
         self.pp = QtGui.QCursor()
         self.start = time.time()
-        self.home.lower()#raise_()
+        self.home.raise_()
         self.about.lower()
         self.demo.lower()
         self._update()
