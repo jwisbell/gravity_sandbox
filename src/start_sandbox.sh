@@ -1,11 +1,12 @@
 #/bin/bash
+cd /home/gravbox/grav/gravity_sandbox/src
 
 LOOP=1
 
 while [ $LOOP -gt 0 ]; do
     echo Starting GravBox...
     LOOP=0
-    python gravbox.py #start with default settings
+    python /home/gravbox/grav/gravity_sandbox/src/gravbox.py #start with default settings
     rc=$?
     if [ $rc -eq 2 ]; then
         #start sarndbox
